@@ -175,8 +175,8 @@ void mmHomePagePanel::insertDataIntoTemplate()
     m_frames["STATISTICS"] = stat_widget.getHTMLText();
     m_frames["TOGGLES"] = getToggles();
 
-    htmlWidgetCurrency currency_rates;
-    m_frames["CURRENCY_RATES"] = currency_rates.getHtmlText();
+    // htmlWidgetCurrency currency_rates;
+    // m_frames["CURRENCY_RATES"] = currency_rates.getHtmlText();
 }
 
 const wxString mmHomePagePanel::getToggles()

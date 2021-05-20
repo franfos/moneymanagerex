@@ -813,6 +813,10 @@ void mmTransDialog::OnFocusChange(wxChildFocusEvent& event)
 
     if (!m_transfer)
     {
+        if (cbPayee_->GetCount() == 1 && object_in_focus_ != cbPayee_->GetId())
+        {
+          cbPayee_->ChangeValue(cbPayee_->GetString(0));
+        }
         Model_Payee::Data * payee = Model_Payee::instance().get(cbPayee_->GetValue());
         if (payee)
         {

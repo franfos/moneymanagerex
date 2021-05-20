@@ -395,7 +395,6 @@ const wxString htmlWidgetIncomeVsExpenses::getHTMLText()
         Model_Checking::TRANSDATE(date_range->start_date(), GREATER_OR_EQUAL)
         , Model_Checking::TRANSDATE(date_range->end_date(), LESS_OR_EQUAL)
         , Model_Checking::STATUS(Model_Checking::VOID_, NOT_EQUAL)
-        , Model_Checking::TRANSCODE(Model_Checking::TRANSFER, NOT_EQUAL)
     );
 
     for (const auto& pBankTransaction : transactions)
@@ -408,10 +407,23 @@ const wxString htmlWidgetIncomeVsExpenses::getHTMLText()
         double convRate = Model_CurrencyHistory::getDayRate(Model_Account::instance().get(pBankTransaction.ACCOUNTID)->CURRENCYID, pBankTransaction.TRANSDATE);
 
         int idx = pBankTransaction.ACCOUNTID;
-        if (Model_Checking::type(pBankTransaction) == Model_Checking::DEPOSIT)
-            incomeExpensesStats[idx].first += pBankTransaction.TRANSAMOUNT * convRate;
-        else
+        if (pBankTransaction.TOACCOUNTID > 0)
+        {
+          Model_Account::Data *accountTo = Model_Account::instance().get(pBankTransaction.TOACCOUNTID);
+          if (Model_Account::type(accountTo) != Model_Account::TERM)
+            continue;
+          else
+          {
             incomeExpensesStats[idx].second += pBankTransaction.TRANSAMOUNT * convRate;
+          }
+        }
+        else
+        {
+          if (Model_Checking::type(pBankTransaction) == Model_Checking::DEPOSIT)
+              incomeExpensesStats[idx].first += pBankTransaction.TRANSAMOUNT * convRate;
+          else
+              incomeExpensesStats[idx].second += pBankTransaction.TRANSAMOUNT * convRate;
+        }
     }
 
     for (const auto& account : Model_Account::instance().all())
