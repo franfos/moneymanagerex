@@ -175,6 +175,7 @@ void mmCheckingPanel::filterTable()
         full_tran.PAYEENAME = full_tran.real_payee_name(m_AccountID);
         full_tran.BALANCE = m_account_balance;
         full_tran.AMOUNT = transaction_amount;
+        full_tran.HAS_ATTACHMENT = attachments.count(tran.TRANSID) > 0;
         m_filteredBalance += transaction_amount;
 
         if (custom_fields.find(tran.TRANSID) != custom_fields.end()) {
@@ -198,9 +199,6 @@ void mmCheckingPanel::filterTable()
                 }
             }
         }
-
-        if (attachments.count(full_tran.TRANSID))
-            full_tran.NOTES.Prepend(mmAttachmentManage::GetAttachmentNoteSign());
 
         m_listCtrlAccount->m_trans.push_back(full_tran);
     }
@@ -445,9 +443,8 @@ void mmCheckingPanel::updateExtraTransactionData(bool single, bool foreign)
         int trx_id = m_listCtrlAccount->getSelectedId()[0];
         const Model_Checking::Data* trx = Model_Checking::instance().get(trx_id);
         Model_Checking::Full_Data full_tran(*trx);
-        m_info_panel->SetLabelText(full_tran.NOTES);
-        wxString miniStr = full_tran.info();
 
+        wxString miniStr = full_tran.info();
         //Show only first line but full string set as tooltip
         if (miniStr.Find("\n") > 1 && !miniStr.IsEmpty())
         {
@@ -460,19 +457,63 @@ void mmCheckingPanel::updateExtraTransactionData(bool single, bool foreign)
             m_info_panel_mini->SetToolTip(miniStr);
         }
 
+        wxString notesStr = full_tran.NOTES;
+        if (full_tran.has_attachment()) {
+            const wxString& RefType = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION);
+            Model_Attachment::Data_Set attachments = Model_Attachment::instance().FilterAttachments(RefType, full_tran.id());
+            for (const auto& i : attachments) {
+                notesStr += notesStr.empty() ? "" : "\n";
+                notesStr += _("Attachment") + " " + i.DESCRIPTION + " " + i.FILENAME;
+            }
+        }
+        m_info_panel->SetLabelText(notesStr);
     }
     else
     {
         m_info_panel_mini->SetLabelText("");
-        if (m_listCtrlAccount->getSelectedId().size() > 0)
+        const auto s = m_listCtrlAccount->getSelectedId();
+        if (s.size() > 0)
         {
             enableTransactionButtons(true, false, false);
-            m_info_panel->SetLabelText("");
-        } else
+
+            wxString maxDate;
+            wxString minDate;
+            double balance = 0;
+            for (const auto& i : s)
+            {
+                const Model_Checking::Data* trx = Model_Checking::instance().get(i);
+                balance += Model_Checking::balance(trx, m_AccountID);
+                if (minDate > trx->TRANSDATE || maxDate.empty()) minDate = trx->TRANSDATE;
+                if (maxDate < trx->TRANSDATE || maxDate.empty()) maxDate = trx->TRANSDATE;
+            }
+
+            wxDateTime min_date, max_date;
+            min_date.ParseISODate(minDate);
+            max_date.ParseISODate(maxDate);
+            int days = max_date.Subtract(min_date).GetDays();
+
+            Model_Account::Data *account = Model_Account::instance().get(m_AccountID);
+            Model_Currency::Data* currency = nullptr;
+            if (account) currency = Model_Currency::instance().get(account->CURRENCYID);
+            wxString msg;
+            msg = wxString::Format(_("Transactions selected: %zu"), s.size());
+            msg += "\n";
+            if (currency) {
+                msg += wxString::Format(_("Selected transactions balance: %s")
+                    , Model_Currency::toCurrency(balance, currency));
+                msg += "\n";
+            }
+            msg += wxString::Format(_("Days between selected transactions: %d"), days);
+#ifdef __WXMAC__    // See issue #2914
+            msg = "";
+#endif
+            m_info_panel->SetLabelText(msg);
+        }
+        else
         {
             enableTransactionButtons(false, false, false);
             showTips();
-        }   
+        }
     }
 }
 //----------------------------------------------------------------------------

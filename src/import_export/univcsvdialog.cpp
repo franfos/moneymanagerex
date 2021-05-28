@@ -135,6 +135,7 @@ bool mmUnivCSVDialog::Create(wxWindow* parent
     this->SetInitialSize();
     SetIcon(mmex::getProgramIcon());
     Centre();
+    Fit();
     return TRUE;
 }
 
@@ -371,9 +372,12 @@ void mmUnivCSVDialog::CreateControls()
         rowSelectionStaticBoxSizer->Add(itemStaticText7, g_flagsH);
         m_spinIgnoreFirstRows_ = new wxSpinCtrl(rowSelectionStaticBoxSizer->GetStaticBox(), ID_FIRST_ROW
             , wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS);
+        m_spinIgnoreFirstRows_->SetMinSize(wxSize(50, -1));
         rowSelectionStaticBoxSizer->Add(m_spinIgnoreFirstRows_, g_flagsH);
         m_spinIgnoreFirstRows_->Connect(wxEVT_COMMAND_SPINCTRL_UPDATED
             , wxSpinEventHandler(mmUnivCSVDialog::OnSpinCtrlIgnoreRows), nullptr, this);
+
+        rowSelectionStaticBoxSizer->AddSpacer(30);
 
         // "Ignore last" title, spin and event handler.
         wxStaticText* itemStaticText8 = new wxStaticText(rowSelectionStaticBoxSizer->GetStaticBox()
@@ -381,6 +385,7 @@ void mmUnivCSVDialog::CreateControls()
         rowSelectionStaticBoxSizer->Add(itemStaticText8, g_flagsH);
         m_spinIgnoreLastRows_ = new wxSpinCtrl(rowSelectionStaticBoxSizer->GetStaticBox()
             , ID_LAST_ROW, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 0, 0);
+        m_spinIgnoreLastRows_->SetMinSize(wxSize(50, -1));
         rowSelectionStaticBoxSizer->Add(m_spinIgnoreLastRows_, g_flagsH);
         m_spinIgnoreLastRows_->Connect(wxEVT_COMMAND_SPINCTRL_UPDATED
             , wxSpinEventHandler(mmUnivCSVDialog::OnSpinCtrlIgnoreRows), nullptr, this);
@@ -403,13 +408,10 @@ void mmUnivCSVDialog::CreateControls()
     itemPanel5->SetSizer(itemBoxSizer6);
 
     if (IsImporter()) {
-        itemButton_Import_ = new wxButton(itemPanel5, ID_UNIVCSVBUTTON_IMPORT, _("&Import")
-            , wxDefaultPosition, wxDefaultSize, 0);
+        itemButton_Import_ = new wxButton(itemPanel5, ID_UNIVCSVBUTTON_IMPORT, _("&Import"));
     } else {
-        itemButton_Import_ = new wxButton(itemPanel5, ID_UNIVCSVBUTTON_EXPORT, _("&Export")
-            , wxDefaultPosition, wxDefaultSize, 0);
+        itemButton_Import_ = new wxButton(itemPanel5, ID_UNIVCSVBUTTON_EXPORT, _("&Export"));
     }
-    itemButton_Import_->Disable();
     itemBoxSizer6->Add(itemButton_Import_, 0, wxALIGN_CENTER | wxALL, 5);
 
     wxButton* itemCancelButton = new wxButton(itemPanel5, wxID_CANCEL, wxGetTranslation(g_CancelLabel));
@@ -504,8 +506,12 @@ void mmUnivCSVDialog::SetSettings(const wxString &json_data)
     if (!df.empty())
     {
         const auto m = g_date_formats_map();
-        if (m.find(df) != m.end()) {
-            const wxString mask = m.at(df);
+
+        auto it = std::find_if(m.begin(), m.end(),
+            [&df](const std::pair<wxString, wxString>& element) { return element.first == df; });
+
+        if (it != m.end()) {
+            const wxString mask = it->second;
             choiceDateFormat_->SetStringSelection(mask);
             date_format_ = df;
         }
@@ -957,7 +963,8 @@ void mmUnivCSVDialog::OnImport(wxCommandEvent& WXUNUSED(event))
     const long linesToImport = lastRow - firstRow;
     long countEmptyLines = 0;
 
-    Model_Checking::instance().Savepoint();
+    Model_Checking::instance().Begin();
+    Model_Checking::instance().Savepoint("IMP");
 
     wxProgressDialog progressDlg(_("Universal CSV Import")
         , wxEmptyString, linesToImport
@@ -1058,11 +1065,12 @@ void mmUnivCSVDialog::OnImport(wxCommandEvent& WXUNUSED(event))
 
     msg << "\n\n";
 
-    // Since all database transactions are only in memory,
+    Model_Checking::instance().ReleaseSavepoint("IMP");
+
     if (!canceledbyuser && nImportedLines > 0)
     {
         // we need to save them to the database.
-        Model_Checking::instance().ReleaseSavepoint();
+        Model_Checking::instance().Commit();
         mmWebApp::MMEX_WebApp_UpdateAccount();
         mmWebApp::MMEX_WebApp_UpdatePayee();
         mmWebApp::MMEX_WebApp_UpdateCategory();
@@ -1074,8 +1082,8 @@ void mmUnivCSVDialog::OnImport(wxCommandEvent& WXUNUSED(event))
     }
     else
     {
-        // and discard the database changes.
-        Model_Checking::instance().Rollback();
+        // discard the database changes.
+        Model_Checking::instance().Rollback("");
         if (canceledbyuser) msg << _("Imported transactions discarded by user!");
         else msg << _("No imported transactions!");
         msg << "\n\n";
@@ -1121,7 +1129,7 @@ void mmUnivCSVDialog::OnExport(wxCommandEvent& WXUNUSED(event))
     Model_Account::Data* from_account = Model_Account::instance().get(acctName);
 
     if (!from_account)
-        return;
+        return mmErrorDialogs::ToolTip4Object(m_choice_account_, _("Invalid Account"), _("Error"));
 
     const auto split = Model_Splittransaction::instance().get_all();
     int fromAccountID = from_account->ACCOUNTID;
@@ -1251,7 +1259,7 @@ void mmUnivCSVDialog::update_preview()
     this->m_list_ctrl_->SetColumnWidth(colCount, 30);
     ++colCount;
 
-    const int MAX_ROWS_IN_PREVIEW = 20;
+    const int MAX_ROWS_IN_PREVIEW = 50;
     const int MAX_COLS = 30; // Not including line number col.
 
     int date_col = -1;
@@ -1272,12 +1280,9 @@ void mmUnivCSVDialog::update_preview()
         const wxString fileName = m_text_ctrl_->GetValue();
         wxFileName csv_file(fileName);
 
-        if (fileName.IsEmpty() || !csv_file.FileExists())
-        {
-            itemButton_Import_->Disable();
+        if (fileName.IsEmpty() || !csv_file.FileExists()) {
             return;
         }
-        itemButton_Import_->Enable();
 
         // Open and parse file
         std::unique_ptr <ITransactionsFile> pImporter(CreateFileHandler());
@@ -1289,9 +1294,13 @@ void mmUnivCSVDialog::update_preview()
 
         std::unique_ptr<mmDates> dParser(new mmDates);
 
+        int i = m_spinIgnoreLastRows_->GetValue();
+
         // Import- Add rows to preview
         for (unsigned int row = 0; row < totalLines; row++)
         {
+            if (row >= MAX_ROWS_IN_PREVIEW && row < (totalLines - MAX_ROWS_IN_PREVIEW - i))
+                continue;
             unsigned int col = 0;
             wxString buf;
             buf.Printf("%d", col);
@@ -1322,7 +1331,6 @@ void mmUnivCSVDialog::update_preview()
                 ++col;
                 m_list_ctrl_->SetItem(itemIndex, col, content);
             }
-            if (row >= MAX_ROWS_IN_PREVIEW) break;
         }
 
         m_spinIgnoreLastRows_->SetRange(m_spinIgnoreLastRows_->GetMin(), m_list_ctrl_->GetItemCount());
@@ -1406,7 +1414,7 @@ void mmUnivCSVDialog::update_preview()
                         {
                         case UNIV_CSV_DATE:
                         {
-                            text << inQuotes(Model_Checking::TRANSDATE(pBankTransaction).Format(date_format_), delimit);
+                            text << inQuotes(mmGetDateForDisplay(Model_Checking::TRANSDATE(pBankTransaction).FormatISODate(),date_format_), delimit);
                             break;
                         }
                         case UNIV_CSV_PAYEE:
@@ -1507,17 +1515,17 @@ void mmUnivCSVDialog::OnStandard(wxCommandEvent& WXUNUSED(event))
     csvListBox_->Clear();
     csvFieldOrder_.clear();
     int standard[] = { UNIV_CSV_DATE, UNIV_CSV_PAYEE, UNIV_CSV_AMOUNT, UNIV_CSV_CATEGORY, UNIV_CSV_SUBCATEGORY, UNIV_CSV_TRANSNUM, UNIV_CSV_NOTES };
-    for (size_t i = 0; i < sizeof(standard) / sizeof(UNIV_CSV_DATE); ++i)
+    for (const auto i : standard)
     {
-        csvListBox_->Append(wxGetTranslation(CSVFieldName_[standard[i]]), new mmListBoxItem(standard[i], CSVFieldName_[standard[i]]));
-        csvFieldOrder_.push_back(standard[i]);
+        csvListBox_->Append(wxGetTranslation(CSVFieldName_[i]), new mmListBoxItem(i, CSVFieldName_[i]));
+        csvFieldOrder_.push_back(i);
     }
 
     csvFieldCandicate_->Clear();
-    int rest[] = { UNIV_CSV_DONTCARE, UNIV_CSV_WITHDRAWAL, UNIV_CSV_DEPOSIT, UNIV_CSV_BALANCE };
-    for (size_t i = 0; i < sizeof(rest) / sizeof(UNIV_CSV_DATE); ++i)
+    int rest[] = { UNIV_CSV_NOTES, UNIV_CSV_DONTCARE, UNIV_CSV_WITHDRAWAL, UNIV_CSV_DEPOSIT, UNIV_CSV_BALANCE };
+    for (const auto i : rest)
     {
-        csvFieldCandicate_->Append(wxGetTranslation(CSVFieldName_[rest[i]]), new mmListBoxItem(rest[i], CSVFieldName_[rest[i]]));
+        csvFieldCandicate_->Append(wxGetTranslation(CSVFieldName_[i]), new mmListBoxItem(i, CSVFieldName_[i]));
     }
 
     update_preview();
@@ -1820,9 +1828,6 @@ void mmUnivCSVDialog::OnChoiceChanged(wxCommandEvent& event)
         Model_Account::Data* account = Model_Account::instance().get(acctName);
         Model_Currency::Data* currency = Model_Account::currency(account);
         *log_field_ << _("Currency:") << " " << wxGetTranslation(currency->CURRENCYNAME) << "\n";
-        if (account) {
-            itemButton_Import_->Enable();
-        }
     }
     else if (i == ID_ENCODING)
     {

@@ -60,6 +60,7 @@ wxBEGIN_EVENT_TABLE(TransactionListCtrl, mmListCtrl)
     EVT_MENU_RANGE(MENU_TREEPOPUP_NEW_WITHDRAWAL, MENU_TREEPOPUP_NEW_DEPOSIT, TransactionListCtrl::OnNewTransaction)
     EVT_MENU(MENU_TREEPOPUP_NEW_TRANSFER, TransactionListCtrl::OnNewTransferTransaction)
     EVT_MENU(MENU_TREEPOPUP_DELETE2, TransactionListCtrl::OnDeleteTransaction)
+    EVT_MENU_RANGE(MENU_TREEPOPUP_DELETE_VIEWED, MENU_TREEPOPUP_DELETE_UNRECONCILED, TransactionListCtrl::OnDeleteViewedTransaction)
     EVT_MENU(MENU_TREEPOPUP_EDIT2, TransactionListCtrl::OnEditTransaction)
     EVT_MENU(MENU_TREEPOPUP_MOVE2, TransactionListCtrl::OnMoveTransaction)
 
@@ -298,7 +299,7 @@ void TransactionListCtrl::OnListItemFocused(wxListEvent& WXUNUSED(event))
 {
     wxLogDebug("OnListItemFocused: %i selected", GetSelectedItemCount());
     FindSelectedTransactions();
-    setExtraTransactionData(false);
+    setExtraTransactionData(GetSelectedItemCount() == 1);
 }
 
 void TransactionListCtrl::OnListLeftClick(wxMouseEvent& event)
@@ -695,7 +696,7 @@ int TransactionListCtrl::OnPaste(Model_Checking::Data* tran)
 
     Model_Checking::Data* copy = Model_Checking::instance().clone(tran); //TODO: this function can't clone split transactions
     if (!useOriginalDate) copy->TRANSDATE = wxDateTime::Now().FormatISODate();
-    if (Model_Checking::type(copy->TRANSCODE) != Model_Checking::TRANSFER) copy->ACCOUNTID = m_cp->m_AccountID;
+    copy->ACCOUNTID = m_cp->m_AccountID;
     int transactionID = Model_Checking::instance().save(copy);
     m_pasted_id.push_back(transactionID);   // add the newly pasted transaction
 
@@ -769,7 +770,69 @@ void TransactionListCtrl::OnListKeyDown(wxListEvent& event)
 }
 //----------------------------------------------------------------------------
 
-void TransactionListCtrl::OnDeleteTransaction(wxCommandEvent& /*event*/)
+void TransactionListCtrl::OnDeleteViewedTransaction(wxCommandEvent& event)
+{
+    auto i = event.GetId();
+
+    if (i == MENU_TREEPOPUP_DELETE_VIEWED)
+    {
+        wxMessageDialog msgDlg(this
+            , _("Do you really want to delete all the transactions shown?")
+            , _("Confirm Transaction Deletion")
+            , wxYES_NO | wxNO_DEFAULT | wxICON_ERROR);
+        if (msgDlg.ShowModal() == wxID_YES)
+        {
+            DeleteTransactionsByStatus("");
+        }
+    }
+    else if (i == MENU_TREEPOPUP_DELETE_FLAGGED)
+    {
+        wxMessageDialog msgDlg(this
+            , wxString::Format(_("Do you really want to delete all the \"%s\" transactions shown?"), _("Follow Up"))
+            , _("Confirm Transaction Deletion")
+            , wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION);
+        if (msgDlg.ShowModal() == wxID_YES)
+        {
+            DeleteTransactionsByStatus(Model_Checking::all_status()[Model_Checking::FOLLOWUP]);
+        }
+    }
+    else if (i == MENU_TREEPOPUP_DELETE_UNRECONCILED)
+    {
+        wxMessageDialog msgDlg(this
+            , wxString::Format(_("Do you really want to delete all the \"%s\" transactions shown?"), _("Unreconciled"))
+            , _("Confirm Transaction Deletion")
+            , wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION);
+        if (msgDlg.ShowModal() == wxID_YES)
+        {
+            DeleteTransactionsByStatus(Model_Checking::all_status()[Model_Checking::NONE]);
+        }
+    }
+    refreshVisualList();
+}
+
+void TransactionListCtrl::DeleteTransactionsByStatus(const wxString& status)
+{
+    const auto s = Model_Checking::toShortStatus(status);
+    Model_Checking::instance().Savepoint();
+    Model_Attachment::instance().Savepoint();
+    Model_Splittransaction::instance().Savepoint();
+    for (const auto& tran : this->m_trans)
+    {
+        if (tran.STATUS == s || (s.empty() && status.empty()))
+        {
+            // remove also removes any split transactions
+            Model_Checking::instance().remove(tran.TRANSID);
+            mmAttachmentManage::DeleteAllAttachments(Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION), tran.TRANSID);
+
+        }
+    }
+    Model_Splittransaction::instance().ReleaseSavepoint();
+    Model_Attachment::instance().ReleaseSavepoint();
+    Model_Checking::instance().ReleaseSavepoint();
+}
+
+
+void TransactionListCtrl::OnDeleteTransaction(wxCommandEvent& WXUNUSED(event))
 {
     // check if any transactions selected
     int sel = GetSelectedItemCount();
@@ -813,6 +876,7 @@ void TransactionListCtrl::OnDeleteTransaction(wxCommandEvent& /*event*/)
             m_selectedForCopy.erase(std::remove(m_selectedForCopy.begin(), m_selectedForCopy.end(), i)
                 , m_selectedForCopy.end());
         }
+        m_selected_id.clear();
         Model_Splittransaction::instance().ReleaseSavepoint();
         Model_Attachment::instance().ReleaseSavepoint();
         Model_Checking::instance().ReleaseSavepoint();
@@ -940,14 +1004,15 @@ void TransactionListCtrl::OnEditTransaction(wxCommandEvent& /*event*/)
 
 void TransactionListCtrl::OnNewTransaction(wxCommandEvent& event)
 {
-    FindSelectedTransactions();
     int type = event.GetId() == MENU_TREEPOPUP_NEW_DEPOSIT ? Model_Checking::DEPOSIT : Model_Checking::WITHDRAWAL;
     mmTransDialog dlg(this, m_cp->m_AccountID, 0, m_cp->m_account_balance, false, type);
     int i = dlg.ShowModal();
     if (i != wxID_CANCEL)
     {
+        m_selected_id.clear();
+        m_pasted_id.push_back(dlg.GetTransactionID());
         m_cp->mmPlayTransactionSound();
-        refreshVisualList(dlg.GetTransactionID());
+        refreshVisualList();
 
         if (i == wxID_NEW) {
             OnNewTransaction(event);
@@ -1172,17 +1237,14 @@ void TransactionListCtrl::markSelectedTransaction()
         ++i;
     }
 
-    if (!m_trans.empty() && m_selected_id.empty())
+    if (m_trans.empty()) return;
+
+    if (m_selected_id.empty())
     {
         i = static_cast<long>(m_trans.size()) - 1;
         if (!g_asc)
             i = 0;
         EnsureVisible(i);
-    }
-    else
-    {
-        m_cp->enableTransactionButtons(false, false, false);
-        m_cp->showTips();
     }
 }
 
@@ -1209,27 +1271,6 @@ void TransactionListCtrl::DeleteViewedTransactions()
     Model_Attachment::instance().ReleaseSavepoint();
     Model_Checking::instance().ReleaseSavepoint();
 }
-
-void TransactionListCtrl::DeleteFlaggedTransactions(const wxString& status)
-{
-    Model_Checking::instance().Savepoint();
-    Model_Attachment::instance().Savepoint();
-    Model_Splittransaction::instance().Savepoint();
-    for (const auto& tran : this->m_trans)
-    {
-        if (tran.STATUS == status)
-        {
-            // remove also removes any split transactions
-            Model_Checking::instance().remove(tran.TRANSID);
-            mmAttachmentManage::DeleteAllAttachments(Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION), tran.TRANSID);
-
-        }
-    }
-    Model_Splittransaction::instance().ReleaseSavepoint();
-    Model_Attachment::instance().ReleaseSavepoint();
-    Model_Checking::instance().ReleaseSavepoint();
-}
-
 
 void TransactionListCtrl::doSearchText(const wxString& value)
 {
@@ -1343,6 +1384,8 @@ const wxString TransactionListCtrl::getItem(long item, long column, bool realenu
     case TransactionListCtrl::COL_NOTES:
         value = tran.NOTES;
         value.Replace("\n", " ");
+        if (tran.has_attachment())
+            value.Prepend(mmAttachmentManage::GetAttachmentNoteSign());
         return value;
     case TransactionListCtrl::COL_UDFC01:
         return tran.UDFC01;

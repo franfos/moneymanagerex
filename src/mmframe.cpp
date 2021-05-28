@@ -355,7 +355,10 @@ void mmGUIFrame::ShutdownDatabase()
     if (m_db)
     {
         if (!Model_Infotable::instance().cache_.empty()) //Cache empty on InfoTable means instance never initialized
-            Model_Infotable::instance().Set("ISUSED", false);
+        {
+            if (!db_lockInPlace)
+                Model_Infotable::instance().Set("ISUSED", false);
+        }
         m_db->SetCommitHook(nullptr);
         m_db->Close();
         delete m_commit_callback_hook;
@@ -1283,17 +1286,17 @@ void mmGUIFrame::showTreePopupMenu(const wxTreeItemId& id, const wxPoint& pt)
             // Create only for Account types: Bank, Cash, Loan & Credit Card
             if ((iData->getString() != "item@Term Accounts") && (iData->getString() != "item@Stocks"))
             {
+                wxMenu* importFrom = new wxMenu;
+                importFrom->Append(MENU_TREEPOPUP_ACCOUNT_IMPORTUNIVCSV, _("&CSV Files..."));
+                importFrom->Append(MENU_TREEPOPUP_ACCOUNT_IMPORTXML, _("&XML Files..."), _("Import from XML (Excel format)"));
+                importFrom->Append(MENU_TREEPOPUP_ACCOUNT_IMPORTQIF, _("&QIF Files..."));
+                menu.AppendSubMenu(importFrom, _("&Import"));
                 wxMenu* exportTo = new wxMenu;
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2CSV, _("&CSV Files..."));
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2XML, _("&XML Files..."));
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2QIF, _("&QIF Files..."));
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2JSON, _("&JSON Files..."));
                 menu.AppendSubMenu(exportTo, _("&Export"));
-                wxMenu* importFrom = new wxMenu;
-                importFrom->Append(MENU_TREEPOPUP_ACCOUNT_IMPORTUNIVCSV, _("&CSV Files..."));
-                importFrom->Append(MENU_TREEPOPUP_ACCOUNT_IMPORTXML, _("&XML Files..."), _("Import from XML (Excel format)"));
-                importFrom->Append(MENU_TREEPOPUP_ACCOUNT_IMPORTQIF, _("&QIF Files..."));
-                menu.AppendSubMenu(importFrom, _("&Import"));
                 menu.AppendSeparator();
             }
 
@@ -1351,6 +1354,13 @@ void mmGUIFrame::createMenu()
     menu_file->Append(menuClearRecentFiles);
     menu_file->AppendSeparator();
 
+    wxMenu* importMenu = new wxMenu;
+    importMenu->Append(MENU_IMPORT_UNIVCSV, _("&CSV Files..."), _("Import from any CSV file"));
+    importMenu->Append(MENU_IMPORT_XML, _("&XML Files..."), _("Import from XML (Excel format)"));
+    importMenu->Append(MENU_IMPORT_QIF, _("&QIF Files..."), _("Import from QIF"));
+    importMenu->Append(MENU_IMPORT_WEBAPP, _("&WebApp..."), _("Import from WebApp"));
+    menu_file->Append(MENU_IMPORT, _("&Import"), importMenu);
+
     wxMenu* exportMenu = new wxMenu;
     exportMenu->Append(MENU_EXPORT_CSV, _("&CSV Files..."), _("Export to CSV"));
     exportMenu->Append(MENU_EXPORT_XML, _("&XML Files..."), _("Export to XML"));
@@ -1358,13 +1368,6 @@ void mmGUIFrame::createMenu()
     exportMenu->Append(MENU_EXPORT_JSON, _("&JSON Files..."), _("Export to JSON"));
     exportMenu->Append(MENU_EXPORT_HTML, _("&HTML Files..."), _("Export to HTML"));
     menu_file->Append(MENU_EXPORT, _("&Export"), exportMenu);
-
-    wxMenu* importMenu = new wxMenu;
-    importMenu->Append(MENU_IMPORT_UNIVCSV, _("&CSV Files..."), _("Import from any CSV file"));
-    importMenu->Append(MENU_IMPORT_XML, _("&XML Files..."), _("Import from XML (Excel format)"));
-    importMenu->Append(MENU_IMPORT_QIF, _("&QIF Files..."), _("Import from QIF"));
-    importMenu->Append(MENU_IMPORT_WEBAPP, _("&WebApp..."), _("Import from WebApp"));
-    menu_file->Append(MENU_IMPORT, _("&Import"), importMenu);
 
     menu_file->AppendSeparator();
 
@@ -1929,13 +1932,13 @@ bool mmGUIFrame::openFile(const wxString& fileName, bool openingNew, const wxStr
         }
 
         if (!m_app->GetSilentParam()) {
-            bool isUsed = Model_Infotable::instance().GetBoolInfo("ISUSED", false);
-            if (isUsed) {
+            db_lockInPlace = Model_Infotable::instance().GetBoolInfo("ISUSED", false);
+            if (db_lockInPlace) {
                 int response = wxMessageBox(_(
-                    "Database that you trying to open has been marked as opened by another MMEX instance...\n"
-                    "To avoid data loss or conflict, it's strongly recommended to close all other applications that can use the DB.\n\n"
-                    "Possible it may be as result of a programm crash in previous usage.\n\n"
-                    "Would you like to continue?")
+                    "The database you are trying to open has been marked as opened by another instance of MMEX.\n"
+                    "To avoid data loss or conflict, it's strongly recommended that you close all other applications that may be using the database.\n\n"
+                    "If nothing else is running, it's possible that the database was left open as a result of a crash during previous usage of MMEX.\n\n"
+                    "Would you like to continue to open this database?")
                     , _("MMEX Instance Check"), wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
                 if (response == wxNO)
                     return false;
@@ -1943,6 +1946,7 @@ bool mmGUIFrame::openFile(const wxString& fileName, bool openingNew, const wxStr
         }
 
         Model_Infotable::instance().Set("ISUSED", true);
+        db_lockInPlace = false;
         autoRepeatTransactionsTimer_.Start(REPEAT_TRANS_DELAY_TIME, wxTIMER_ONE_SHOT);
     }
     else return false;
