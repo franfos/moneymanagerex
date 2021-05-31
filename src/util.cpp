@@ -516,6 +516,7 @@ const std::vector<std::pair<wxString, wxString> > g_date_formats_map()
         "%d,%m,%y",
         "%d.%m.%y",
         "%d.%m.%Y",
+        "%d,%m,%Y",
         "%d/%m %Y",
         "%d/%m/%y",
         "%d/%m/%Y",
@@ -1068,7 +1069,7 @@ const wxString getProgramDescription(int type)
         << eol
 
         << bull + wxSQLITE3_VERSION_STRING
-        << " (SQLite " << wxSQLite3Database::GetVersion() << ")"
+        << " (SQLite " << wxSQLite3Database::GetVersion() << ")" << eol
         << bull + "RapidJSON " << RAPIDJSON_VERSION_STRING << eol
         << bull + LUA_RELEASE << eol
         << bull + "lunasvg " << eol
