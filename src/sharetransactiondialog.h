@@ -39,20 +39,21 @@ public:
     int m_stock_id;
 
 private:
-    bool Create(wxWindow* parent, wxWindowID id
-        , const wxString& caption
-        , const wxPoint& pos
-        , const wxSize& size
-        , long style);
+    bool Create(wxWindow* parent, wxWindowID id = wxID_ANY
+        , const wxString& caption = _("Edit Share Transaction")
+        , const wxPoint& pos = wxDefaultPosition
+        , const wxSize& size = wxDefaultSize
+        , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX);
 
     void CreateControls();
     void DataToControls();
 
+    double GetAmount(double shares, double price, double commision);
     void OnQuit(wxCloseEvent& WXUNUSED(event));
     void OnOk(wxCommandEvent& WXUNUSED(event));
     void OnCancel(wxCommandEvent& WXUNUSED(event));
     void OnStockPriceButton(wxCommandEvent& event);
-    void OnTextEntered(wxCommandEvent& event);
+    void CalculateAmount(wxCommandEvent& event);
 
 private:
     Model_Stock::Data* m_stock;

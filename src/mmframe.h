@@ -1,7 +1,7 @@
 /*******************************************************
 Copyright (C) 2006 Madhan Kanagavel
 Copyright (C) 2012 Stefano Giorgio
-Copyright (C) 2013 Nikolay
+Copyright (C) 2013, 2021 Nikolay Akimov
 Copyright (C) 2014 James Higley
 Copyright (C) 2014 Guan Lisheng (guanlisheng@gmail.com)
 Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
@@ -88,6 +88,7 @@ private:
     /* Currently open file name */
     wxString m_filename;
     wxString m_password;
+    wxString m_temp_view;
 
     // Marker to indicate DB was inuse when opened and open cancelled
     bool db_lockInPlace;
@@ -170,6 +171,7 @@ private:
     void OnExportToXML(wxCommandEvent& event);
     void OnExportToQIF(wxCommandEvent& event);
     void OnExportToJSON(wxCommandEvent& event);
+    void OnExportToMMEX(wxCommandEvent& event);
     void OnExportToHtml(wxCommandEvent& event);
     void OnImportUniversalCSV(wxCommandEvent& event);
     void OnImportXML(wxCommandEvent& event);
@@ -193,6 +195,8 @@ private:
     void OnViewBudgetTransferTotal(wxCommandEvent& WXUNUSED(event));
     void OnViewBudgetCategorySummary(wxCommandEvent& WXUNUSED(event));
     void OnViewIgnoreFutureTransactions(wxCommandEvent& WXUNUSED(event));
+    void OnViewShowToolTips(wxCommandEvent& WXUNUSED(event));
+    void OnViewShowMoneyTips(wxCommandEvent& WXUNUSED(event));
     void OnViewToolbarUpdateUI(wxUpdateUIEvent &event);
     void OnViewLinksUpdateUI(wxUpdateUIEvent &event);
 
@@ -217,6 +221,7 @@ private:
     void OnCustomFieldsManager(wxCommandEvent& event);
     void OnGeneralReportManager(wxCommandEvent& event);
     void OnThemeManager(wxCommandEvent& event);
+    void OnRefreshWebApp(wxCommandEvent& event);
 
     void OnHelp(wxCommandEvent& event);
     void OnShowAppStartDialog(wxCommandEvent& WXUNUSED(event));
@@ -297,6 +302,7 @@ private:
         MENU_GOOGLEPLAY,
         MENU_TWITTER, // end range for OnSimpleURLOpen
         MENU_EXPORT_CSV,
+        MENU_EXPORT_MMEX,
         MENU_EXPORT_XML,
         MENU_EXPORT_QIF,
         MENU_EXPORT_JSON,
@@ -312,6 +318,7 @@ private:
         MENU_ACCTEDIT,
         MENU_ACCTDELETE,
         MENU_TRANSACTIONREPORT,
+        MENU_REFRESH_WEBAPP,
         MENU_VIEW_TOOLBAR,
         MENU_VIEW_LINKS,
         MENU_VIEW_HIDE_SHARE_ACCOUNTS,
@@ -344,6 +351,7 @@ private:
         MENU_TREEPOPUP_ACCOUNT_EDIT,
         MENU_TREEPOPUP_ACCOUNT_LIST,
         MENU_TREEPOPUP_ACCOUNT_EXPORT2CSV,
+        MENU_TREEPOPUP_ACCOUNT_EXPORT2MMEX,
         MENU_TREEPOPUP_ACCOUNT_EXPORT2XML,
         MENU_TREEPOPUP_ACCOUNT_EXPORT2QIF,
         MENU_TREEPOPUP_ACCOUNT_EXPORT2JSON,

@@ -1,5 +1,6 @@
 ﻿/*******************************************************
  Copyright (C) 2006 Madhan Kanagavel
+ Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -32,6 +33,14 @@ enum
     MENU_POPUP_BD_ENTER_OCCUR,
     MENU_POPUP_BD_SKIP_OCCUR,
     MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS,
+    MENU_ON_SET_UDC0,
+    MENU_ON_SET_UDC1,
+    MENU_ON_SET_UDC2,
+    MENU_ON_SET_UDC3,
+    MENU_ON_SET_UDC4,
+    MENU_ON_SET_UDC5,
+    MENU_ON_SET_UDC6,
+    MENU_ON_SET_UDC7
 };
 
 const wxString BILLSDEPOSITS_REPEATS[] =
@@ -79,6 +88,7 @@ wxBEGIN_EVENT_TABLE(billsDepositsListCtrl, mmListCtrl)
     EVT_MENU(MENU_POPUP_BD_ENTER_OCCUR,       billsDepositsListCtrl::OnEnterBDTransaction)
     EVT_MENU(MENU_POPUP_BD_SKIP_OCCUR,        billsDepositsListCtrl::OnSkipBDTransaction)
     EVT_MENU(MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS, billsDepositsListCtrl::OnOrganizeAttachments)
+    EVT_MENU_RANGE(MENU_ON_SET_UDC0, MENU_ON_SET_UDC7, billsDepositsListCtrl::OnSetUserColour)
 
     EVT_LIST_KEY_DOWN(wxID_ANY,   billsDepositsListCtrl::OnListKeyDown)
 wxEND_EVENT_TABLE()
@@ -89,6 +99,25 @@ billsDepositsListCtrl::billsDepositsListCtrl(mmBillsDepositsPanel* bdp, wxWindow
 , m_bdp(bdp)
 {
     mmThemeMetaColour(this, meta::COLOR_LISTPANEL);
+
+    const wxAcceleratorEntry entries[] =
+    {
+        wxAcceleratorEntry(wxACCEL_CTRL, 'N', MENU_TREEPOPUP_NEW),   
+        wxAcceleratorEntry(wxACCEL_CTRL, 'E', MENU_TREEPOPUP_EDIT), 
+        wxAcceleratorEntry(wxACCEL_CTRL, 'D', MENU_TREEPOPUP_DELETE),               
+        wxAcceleratorEntry(wxACCEL_CTRL, '0', MENU_ON_SET_UDC0),
+        wxAcceleratorEntry(wxACCEL_CTRL, '1', MENU_ON_SET_UDC1),
+        wxAcceleratorEntry(wxACCEL_CTRL, '2', MENU_ON_SET_UDC2),
+        wxAcceleratorEntry(wxACCEL_CTRL, '3', MENU_ON_SET_UDC3),
+        wxAcceleratorEntry(wxACCEL_CTRL, '4', MENU_ON_SET_UDC4),
+        wxAcceleratorEntry(wxACCEL_CTRL, '5', MENU_ON_SET_UDC5),
+        wxAcceleratorEntry(wxACCEL_CTRL, '6', MENU_ON_SET_UDC6),
+        wxAcceleratorEntry(wxACCEL_CTRL, '7', MENU_ON_SET_UDC7)
+    };
+
+    wxAcceleratorTable tab(sizeof(entries) / sizeof(*entries), entries);
+    SetAcceleratorTable(tab);
+
     // load the global variables
     m_selected_col = Model_Setting::instance().GetIntSetting("BD_SORT_COL", m_bdp->col_sort());
     m_asc = Model_Setting::instance().GetBoolSetting("BD_ASC", true);
@@ -238,6 +267,7 @@ void mmBillsDepositsPanel::CreateControls()
 
     wxPanel* bdPanel = new wxPanel(itemSplitterWindowBillsDeposit, wxID_ANY
         , wxDefaultPosition, wxDefaultSize, wxNO_BORDER | wxTAB_TRAVERSAL);
+    mmThemeMetaColour(bdPanel, meta::COLOR_LISTPANEL);
 
     itemSplitterWindowBillsDeposit->SplitHorizontally(listCtrlAccount_, bdPanel);
     itemSplitterWindowBillsDeposit->SetMinimumPaneSize(100);
@@ -251,33 +281,33 @@ void mmBillsDepositsPanel::CreateControls()
     itemBoxSizer4->Add(itemBoxSizer5, g_flagsBorder1V);
 
     wxButton* itemButtonNew = new wxButton(bdPanel, wxID_NEW, _("&New "));
-    itemButtonNew->SetToolTip(_("New Bills & Deposit Series"));
+    mmToolTip(itemButtonNew, _("New Recurring Transaction"));
     itemBoxSizer5->Add(itemButtonNew, 0, wxRIGHT, 5);
 
     wxButton* itemButton81 = new wxButton(bdPanel, wxID_EDIT, _("&Edit "));
-    itemButton81->SetToolTip(_("Edit Bills & Deposit Series"));
+    mmToolTip(itemButton81, _("Edit Recurring Transaction"));
     itemBoxSizer5->Add(itemButton81, 0, wxRIGHT, 5);
     itemButton81->Enable(false);
 
     wxButton* itemButton7 = new wxButton(bdPanel, wxID_DELETE, _("&Delete "));
-    itemButton7->SetToolTip(_("Delete Bills & Deposit Series"));
+    mmToolTip(itemButton7, _("Delete Recurring Transaction"));
     itemBoxSizer5->Add(itemButton7, 0, wxRIGHT, 5);
     itemButton7->Enable(false);
 
-    wxButton* itemButton8 = new wxButton(bdPanel, wxID_PASTE, _("En&ter"));
-    itemButton8->SetToolTip(_("Enter Next Bills & Deposit Occurrence"));
+    wxButton* itemButton8 = new wxButton(bdPanel, wxID_PASTE, _("Ente&r"));
+    mmToolTip(itemButton8, _("Enter Next Recurring Transaction Occurrence"));
     itemBoxSizer5->Add(itemButton8, 0, wxRIGHT, 5);
     itemButton8->Enable(false);
 
     wxButton* buttonSkipTrans = new wxButton(bdPanel, wxID_IGNORE, _("&Skip"));
-    buttonSkipTrans->SetToolTip(_("Skip Next Bills & Deposit Occurrence"));
+    mmToolTip(buttonSkipTrans, _("Skip Next Recurring Transaction Occurrence"));
     itemBoxSizer5->Add(buttonSkipTrans, 0, wxRIGHT, 5);
     buttonSkipTrans->Enable(false);
 
     wxBitmapButton* btnAttachment_ = new wxBitmapButton(bdPanel, wxID_FILE
         , mmBitmap(png::CLIP), wxDefaultPosition
         , wxSize(30, itemButton8->GetSize().GetY()));
-    btnAttachment_->SetToolTip(_("Open attachments"));
+    mmToolTip(btnAttachment_, _("Open attachments"));
     itemBoxSizer5->Add(btnAttachment_, 0, wxRIGHT, 5);
     btnAttachment_->Enable(false);
 
@@ -383,9 +413,9 @@ void billsDepositsListCtrl::OnItemRightClick(wxMouseEvent& event)
     menu.AppendSeparator();
     menu.Append(MENU_POPUP_BD_SKIP_OCCUR, _("Skip next Occurrence"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_NEW, _("&New Bills && Deposit Series..."));
-    menu.Append(MENU_TREEPOPUP_EDIT, _("&Edit Bills && Deposit Series..."));
-    menu.Append(MENU_TREEPOPUP_DELETE, _("&Delete Bills && Deposit Series..."));
+    menu.Append(MENU_TREEPOPUP_NEW, _("&New Recurring Transaction..."));
+    menu.Append(MENU_TREEPOPUP_EDIT, _("&Edit Recurring Transaction..."));
+    menu.Append(MENU_TREEPOPUP_DELETE, _("&Delete Recurring Transaction..."));
     menu.AppendSeparator();
     menu.Append(MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS, _("&Organize Attachments"));
     
@@ -407,9 +437,9 @@ wxString mmBillsDepositsPanel::getItem(long item, long column)
     case COL_ID:
         return wxString::Format("%i", bill.BDID).Trim();
     case COL_PAYMENT_DATE:
-        return mmGetDateForDisplay(bill.NEXTOCCURRENCEDATE);
-    case COL_DUE_DATE:
         return mmGetDateForDisplay(bill.TRANSDATE);
+    case COL_DUE_DATE:
+        return mmGetDateForDisplay(bill.NEXTOCCURRENCEDATE);
     case COL_ACCOUNT:
         return bill.ACCOUNTNAME;
     case COL_PAYEE:
@@ -482,9 +512,9 @@ const wxString mmBillsDepositsPanel::GetRemainingDays(const Model_Billsdeposits:
     if (repeats >= BD_REPEATS_MULTIPLEX_BASE)    // Auto Execute Silent mode
         repeats -= BD_REPEATS_MULTIPLEX_BASE;
 
-    int daysRemaining = Model_Billsdeposits::NEXTOCCURRENCEDATE(item)
+    int daysRemaining = Model_Billsdeposits::TRANSDATE(item)
         .Subtract(this->getToday()).GetDays();
-    int daysOverdue = Model_Billsdeposits::TRANSDATE(item)
+    int daysOverdue = Model_Billsdeposits::NEXTOCCURRENCEDATE(item)
         .Subtract(this->getToday()).GetDays();
     wxString text = wxString::Format(wxPLURAL("%d day remaining", "%d days remaining", daysRemaining), daysRemaining);
 
@@ -615,8 +645,8 @@ void billsDepositsListCtrl::OnDeleteBDSeries(wxCommandEvent& WXUNUSED(event))
     if (m_bdp->bills_.empty()) return;
     if (m_selected_row < 0) return;
 
-    wxMessageDialog msgDlg(this, _("Do you really want to delete the series?")
-        , _("Confirm Series Deletion")
+    wxMessageDialog msgDlg(this, _("Do you really want to delete the recurring transaction?")
+        , _("Confirm Deletion")
         , wxYES_NO | wxNO_DEFAULT | wxICON_ERROR);
     if (msgDlg.ShowModal() == wxID_YES)
     {
@@ -715,10 +745,10 @@ void mmBillsDepositsPanel::sortTable()
         std::stable_sort(bills_.begin(), bills_.end(), SorterByBDID());
         break;
     case COL_PAYMENT_DATE:
-        std::stable_sort(bills_.begin(), bills_.end(), SorterByNEXTOCCURRENCEDATE());
+        std::stable_sort(bills_.begin(), bills_.end(), SorterByTRANSDATE());
         break;
     case COL_DUE_DATE:
-        std::stable_sort(bills_.begin(), bills_.end(), SorterByTRANSDATE());
+        std::stable_sort(bills_.begin(), bills_.end(), SorterByNEXTOCCURRENCEDATE());
         break;
     case COL_ACCOUNT:
         std::stable_sort(bills_.begin(), bills_.end(), SorterByACCOUNTNAME());
@@ -835,7 +865,7 @@ wxListItemAttr* billsDepositsListCtrl::OnGetItemAttr(long item) const
     int color_id = m_bdp->bills_[item].FOLLOWUPID;
 
     static std::map<int, wxSharedPtr<wxListItemAttr> > cache;
-    if (color_id > -1)
+    if (color_id > 0)
     {
         color_id = std::min(7, color_id);
         const auto it = cache.find(color_id);
@@ -844,13 +874,13 @@ wxListItemAttr* billsDepositsListCtrl::OnGetItemAttr(long item) const
         else {
             switch (color_id)
             {
-            case 1: cache[color_id] = new wxListItemAttr(*wxBLACK, mmColors::userDefColor1, wxNullFont); break;
-            case 2: cache[color_id] = new wxListItemAttr(*wxBLACK, mmColors::userDefColor2, wxNullFont); break;
-            case 3: cache[color_id] = new wxListItemAttr(*wxBLACK, mmColors::userDefColor3, wxNullFont); break;
-            case 4: cache[color_id] = new wxListItemAttr(*wxBLACK, mmColors::userDefColor4, wxNullFont); break;
-            case 5: cache[color_id] = new wxListItemAttr(*wxBLACK, mmColors::userDefColor5, wxNullFont); break;
-            case 6: cache[color_id] = new wxListItemAttr(*wxBLACK, mmColors::userDefColor6, wxNullFont); break;
-            case 7: cache[color_id] = new wxListItemAttr(*wxBLACK, mmColors::userDefColor7, wxNullFont); break;
+            case 1: cache[color_id] = new wxListItemAttr(*bestFontColour(mmColors::userDefColor1), mmColors::userDefColor1, wxNullFont); break;
+            case 2: cache[color_id] = new wxListItemAttr(*bestFontColour(mmColors::userDefColor2), mmColors::userDefColor2, wxNullFont); break;
+            case 3: cache[color_id] = new wxListItemAttr(*bestFontColour(mmColors::userDefColor3), mmColors::userDefColor3, wxNullFont); break;
+            case 4: cache[color_id] = new wxListItemAttr(*bestFontColour(mmColors::userDefColor4), mmColors::userDefColor4, wxNullFont); break;
+            case 5: cache[color_id] = new wxListItemAttr(*bestFontColour(mmColors::userDefColor5), mmColors::userDefColor5, wxNullFont); break;
+            case 6: cache[color_id] = new wxListItemAttr(*bestFontColour(mmColors::userDefColor6), mmColors::userDefColor6, wxNullFont); break;
+            case 7: cache[color_id] = new wxListItemAttr(*bestFontColour(mmColors::userDefColor7), mmColors::userDefColor7, wxNullFont); break;
             }
             return cache[color_id].get();
         }
@@ -858,6 +888,28 @@ wxListItemAttr* billsDepositsListCtrl::OnGetItemAttr(long item) const
 
     /* Returns the alternating background pattern */
     return (item % 2) ? attr2_.get() : attr1_.get();
+}
+
+void billsDepositsListCtrl::OnSetUserColour(wxCommandEvent& event)
+{
+    if (m_selected_row == -1) return;
+    int id = m_bdp->bills_[m_selected_row].BDID;
+
+    int user_colour_id = event.GetId();
+    user_colour_id -= MENU_ON_SET_UDC0;
+    wxLogDebug("id: %i", user_colour_id);
+
+    Model_Billsdeposits::instance().Savepoint();
+
+    Model_Billsdeposits::Data* item = Model_Billsdeposits::instance().get(id);
+    if (item)
+    {
+        item->FOLLOWUPID = user_colour_id;
+        Model_Billsdeposits::instance().save(item);
+    }
+    Model_Billsdeposits::instance().ReleaseSavepoint();
+
+    RefreshList();
 }
 
 void mmBillsDepositsPanel::RefreshList()

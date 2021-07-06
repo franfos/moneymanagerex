@@ -23,6 +23,7 @@ Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
 #include "themes.h"
 #include "util.h"
 #include "model/Model_Setting.h"
+#include "reports/htmlbuilder.h"
 #include <memory>
 #include <wx/mstream.h>
 #include <wx/fs_mem.h>
@@ -39,20 +40,12 @@ EVT_LISTBOX(wxID_ANY, mmThemesDialog::OnThemeView)
 EVT_HTML_LINK_CLICKED(wxID_ANY, mmThemesDialog::OnHtmlLink)
 wxEND_EVENT_TABLE()
 
-const char HTMLPANEL[] = R"(<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8" />
-    <meta http - equiv="Content-Type" content="text/html" />
-    <link href="memory:master.css" rel="stylesheet" />
-</head>
-<body>
+const char HTMLPANEL[] = R"(
 <h1>%s <a href="%s"><img src="%s"></a></h1>
 <h2>%s</h2>
 <p>%s</p>
 <p><img src="%s" width="300" height="150"></p>
-</body>
-</html>)";
+)";
 
 bool mmThemesDialog::vfsThemeImageLoaded = false;
 
@@ -163,21 +156,28 @@ void mmThemesDialog::CreateControls()
 {
     wxBoxSizer* bSizer0 = new wxBoxSizer(wxVERTICAL);
 
-    wxBoxSizer* bSizer1 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer *sizermain = new wxBoxSizer(wxHORIZONTAL);
+    wxSplitterWindow *splittermain = new wxSplitterWindow(this, wxID_ANY);
+    splittermain->SetMinimumPaneSize(50); 
+    sizermain->Add(splittermain, 1, wxEXPAND,0 );
 
-    m_themesListBox_ = new wxListBox(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
-    m_themesListBox_->SetMinSize(wxSize(200, 350));
-    bSizer1->Add(m_themesListBox_, wxSizerFlags(g_flagsExpand).Proportion(0));
+    wxPanel *pnl1 = new wxPanel(splittermain, wxID_ANY);
+    wxBoxSizer *bSizerp1 = new wxBoxSizer(wxVERTICAL);
+    m_themesListBox_ = new wxListBox(pnl1, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_NEEDED_SB);
+    m_themesListBox_->SetSize(200, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord);
+    bSizerp1->Add(m_themesListBox_, 1, wxEXPAND, 0);
+    pnl1->SetSizer(bSizerp1);
+    pnl1->Fit();
 
-    wxBoxSizer* bSizer12 = new wxBoxSizer(wxVERTICAL);
+    wxPanel *pnl2 = new wxPanel(splittermain, wxID_ANY);
+    wxBoxSizer* bSizerp2 = new wxBoxSizer(wxVERTICAL);
+    m_themePanel = new wxHtmlWindow(pnl2, wxID_ANY);
+    bSizerp2->Add(m_themePanel, 1, wxEXPAND, 0);
+    pnl2->SetSizer(bSizerp2);
 
-    m_themePanel = new wxHtmlWindow(this, wxID_ANY);
-    m_themePanel->SetMinSize(wxSize(400, 350));
-    bSizer12->Add(m_themePanel, wxSizerFlags(g_flagsExpand).Proportion(1));
+    bSizer0->Add(sizermain, g_flagsExpand);
 
-    bSizer1->Add(bSizer12, g_flagsExpand);
-
-    bSizer0->Add(bSizer1, g_flagsExpand);
+    splittermain->SplitVertically(pnl1, pnl2);
 
     wxBoxSizer* bSizer02 = new wxBoxSizer(wxHORIZONTAL);
     m_importButton = new wxButton(this, ID_DIALOG_THEME_IMPORT, _("Import"));
@@ -257,10 +257,13 @@ void mmThemesDialog::RefreshView()
     thisTheme.bitMap.SaveFile(mmex::getTempFolder() + themeImageName, wxBITMAP_TYPE_PNG);
     themeImageUrl = "file://" + mmex::getTempFolder() + themeImageName;
 #endif
-
+    mmHTMLBuilder hb;
+    hb.init(true);
     wxString myHtml = wxString::Format(HTMLPANEL, s_name, s_url, imgUrl, s_author
         , s_description, themeImageUrl);
-    m_themePanel->SetPage(myHtml);
+    hb.addText(myHtml);
+    hb.end(true);
+    m_themePanel->SetPage(hb.getHTMLText());
 
     m_deleteButton->Enable(!thisTheme.isChosen && !thisTheme.isSystem);
     m_useButton->Enable(!thisTheme.isChosen);

@@ -1,5 +1,6 @@
 /*******************************************************
-Copyright (C) 2014 - 2020 Nikolay Akimov
+Copyright (C) 2014 - 2021 Nikolay Akimov
+Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -291,9 +292,9 @@ const wxString htmlWidgetBillsAndDeposits::getHTMLText()
 
     //                    days, payee, description, amount, account
     std::vector< std::tuple<int, wxString, wxString, double, const Model_Account::Data*> > bd_days;
-    for (const auto& entry : Model_Billsdeposits::instance().all(Model_Billsdeposits::COL_NEXTOCCURRENCEDATE))
+    for (const auto& entry : Model_Billsdeposits::instance().all(Model_Billsdeposits::COL_TRANSDATE))
     {
-        int daysPayment = Model_Billsdeposits::NEXTOCCURRENCEDATE(&entry)
+        int daysPayment = Model_Billsdeposits::TRANSDATE(&entry)
             .Subtract(today).GetDays();
         if (daysPayment > 14)
             break; // Done searching for all to include
@@ -309,7 +310,7 @@ const wxString htmlWidgetBillsAndDeposits::getHTMLText()
             continue; // Inactive
         }
 
-        int daysOverdue = Model_Billsdeposits::TRANSDATE(&entry)
+        int daysOverdue = Model_Billsdeposits::NEXTOCCURRENCEDATE(&entry)
             .Subtract(today).GetDays();
         wxString daysRemainingStr = (daysPayment > 0
             ? wxString::Format(wxPLURAL("%d day remaining", "%d days remaining", daysPayment), daysPayment)
@@ -352,10 +353,10 @@ const wxString htmlWidgetBillsAndDeposits::getHTMLText()
         output += wxString::Format("<a href=\"billsdeposits:\" oncontextmenu=\"return false;\" target=\"_blank\">%s</a></th>\n<th></th>\n", title_);
         output += wxString::Format("<th nowrap class='text-right sorttable_nosort'>%i <a id='%s_label' onclick=\"toggleTable('%s'); \" href='#%s' oncontextmenu='return false;'>[-]</a></th></tr>\n"
             , int(bd_days.size()), idStr, idStr, idStr);
-        output += "</thead>\n";
+        output += "</thead></table>\n";
 
-        output += wxString::Format("<tbody id='%s'>\n", idStr);
-        output += wxString::Format("<tr style='background-color: #d8ebf0'><th>%s</th>\n<th class='text-right'>%s</th>\n<th class='text-right'>%s</th></tr>\n"
+        output += wxString::Format("<table class='table' id='%s'>\n", idStr);
+        output += wxString::Format("<thead><tr><th>%s</th>\n<th class='text-right'>%s</th>\n<th class='text-right'>%s</th></tr></thead>\n"
             , _("Account / Payee"), _("Amount"), _("Payment"));
 
         for (const auto& item : bd_days)
@@ -366,7 +367,7 @@ const wxString htmlWidgetBillsAndDeposits::getHTMLText()
                 , Model_Account::toCurrency(std::get<3>(item), std::get<4>(item)));
             output += "<td  class='money'>" + std::get<2>(item) + "</td></tr>\n";
         }
-        output += "</tbody></table>\n";
+        output += "</table>\n";
         output += "</div>";
     }
     return output;
@@ -501,13 +502,11 @@ const wxString htmlWidgetStatistics::getHTMLText()
         date_range = new mmCurrentMonth;
 
     Model_Checking::Data_Set all_trans;
-    if (Option::instance().getIgnoreFutureTransactions())
-    {
+    if (Option::instance().getIgnoreFutureTransactions()) {
         all_trans = Model_Checking::instance().find(
             DB_Table_CHECKINGACCOUNT_V1::TRANSDATE(date_range->today().FormatISODate(), LESS_OR_EQUAL));
     }
-    else
-    {
+    else {
         all_trans = Model_Checking::instance().all();
     }
     int countFollowUp = 0;
@@ -520,7 +519,8 @@ const wxString htmlWidgetStatistics::getHTMLText()
         if (Model_Checking::foreignTransactionAsTransfer(trx))
             continue;
 
-        if (Model_Checking::status(trx) == Model_Checking::FOLLOWUP) countFollowUp++;
+        if (Model_Checking::status(trx) == Model_Checking::FOLLOWUP)
+            countFollowUp++;
 
         accountStats[trx.ACCOUNTID].first += Model_Checking::reconciled(trx, trx.ACCOUNTID);
         accountStats[trx.ACCOUNTID].second += Model_Checking::balance(trx, trx.ACCOUNTID);
@@ -649,11 +649,14 @@ const wxString htmlWidgetAccounts::displayAccounts(double& tBalance, int type = 
 {
     static const std::vector < std::pair <wxString, wxString> > typeStr
     {
-        { "CASH_ACCOUNTS_INFO", _("Cash Accounts") },
-        { "ACCOUNTS_INFO", _("Bank Accounts") },
-        { "CARD_ACCOUNTS_INFO", _("Credit Card Accounts") },
-        { "LOAN_ACCOUNTS_INFO", _("Loan Accounts") },
-        { "TERM_ACCOUNTS_INFO", _("Term Accounts") },
+        { "CASH_ACCOUNTS_INFO",   _("Cash Accounts") },
+        { "ACCOUNTS_INFO",        _("Bank Accounts") },
+        { "CARD_ACCOUNTS_INFO",   _("Credit Card Accounts") },
+        { "LOAN_ACCOUNTS_INFO",   _("Loan Accounts") },
+        { "TERM_ACCOUNTS_INFO",   _("Term Accounts") },
+        { "INVEST_ACCOUNTS_INFO", _("Investment Accounts") },
+        { "ASSET_ACCOUNTS_INFO",  _("Asset Accounts") },
+        { "SHARE_ACCOUNTS_INFO",  _("Share Accounts") },
     };
 
     const wxString idStr = typeStr[type].first;
@@ -672,11 +675,13 @@ const wxString htmlWidgetAccounts::displayAccounts(double& tBalance, int type = 
     double tReconciled = 0;
     wxString body = "";
     const wxDate today = wxDate::Today();
-    wxString vAccts = Model_Setting::instance().ViewAccounts();
-    for (const auto& account : Model_Account::instance().all(Model_Account::COL_ACCOUNTNAME))
+    wxString vAccts = Model_Setting::instance().GetViewAccounts();
+    auto accounts = Model_Account::instance().find(
+        Model_Account::ACCOUNTTYPE(Model_Account::all_type()[type])
+        , Model_Account::STATUS(Model_Account::CLOSED, NOT_EQUAL));
+    std::stable_sort(accounts.begin(), accounts.end(), SorterByACCOUNTNAME());
+    for (const auto& account : accounts)
     {
-        if (Model_Account::type(account) != type || Model_Account::status(account) == Model_Account::CLOSED) continue;
-
         Model_Currency::Data* currency = Model_Account::currency(account);
 
         double currency_rate = Model_CurrencyHistory::getDayRate(account.CURRENCYID, today);
@@ -751,7 +756,7 @@ const wxString htmlWidgetCurrency::getHtmlText()
     const wxString baseCurrencySymbol = Model_Currency::GetBaseCurrency()->CURRENCY_SYMBOL;
     std::map<wxString, double> usedRates;
     const auto currencies = Model_Currency::instance().all();
-    int limit = 10;
+
     for (const auto currency : currencies)
     {
         if (Model_Account::is_used(currency)) {
@@ -760,7 +765,7 @@ const wxString htmlWidgetCurrency::getHtmlText()
                 , today);
             usedRates[currency.CURRENCY_SYMBOL] = convertionRate;
 
-            if (--limit <= 0) {
+            if (usedRates.size() >= 10) {
                 break;
             }
         }

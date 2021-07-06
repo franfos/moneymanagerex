@@ -1,6 +1,7 @@
 /*******************************************************
  Copyright (C) 2011 Stefano Giorgio
  Copyright (C) 2014 -2017 Nikolay Akimov
+ Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -22,6 +23,7 @@
 #include "minimal_editor.h"
 #include "mmpanelbase.h"
 #include "mmSimpleDialogs.h"
+#include "images_list.h"
 #include "paths.h"
 #include "platfdep.h"
 #include "util.h"
@@ -339,6 +341,8 @@ void mmGeneralReportManager::CreateControls()
 #endif
     m_treeCtrl = new wxTreeCtrl(this, ID_REPORT_LIST
         , wxDefaultPosition, wxSize(200, 200), treeCtrlFlags);
+    mmThemeMetaColour(m_treeCtrl, meta::COLOR_NAVPANEL);
+    mmThemeMetaColour(m_treeCtrl, meta::COLOR_NAVPANEL_FONT, true);
 
     wxBoxSizer* reportTreeSizer = new wxBoxSizer(wxVERTICAL);
     reportTreeSizer->Add(m_treeCtrl, g_flagsExpand);
@@ -376,24 +380,24 @@ void mmGeneralReportManager::CreateControls()
     //
     m_buttonOpen = new wxButton(buttonPanel, wxID_OPEN, _("&Import"));
     buttonPanelSizer->Add(m_buttonOpen, g_flagsH);
-    m_buttonOpen->SetToolTip(_("Locate and load a report file."));
+    mmToolTip(m_buttonOpen, _("Locate and load a report file."));
 
     m_buttonSaveAs = new wxButton(buttonPanel, wxID_SAVEAS, _("&Export"));
     buttonPanelSizer->Add(m_buttonSaveAs, g_flagsH);
-    m_buttonSaveAs->SetToolTip(_("Export the report to a new file."));
+    mmToolTip(m_buttonSaveAs, _("Export the report to a new file."));
     buttonPanelSizer->AddSpacer(50);
 
     m_buttonSave = new wxButton(buttonPanel, wxID_SAVE, _("&Save "));
     buttonPanelSizer->Add(m_buttonSave, g_flagsH);
-    m_buttonSave->SetToolTip(_("Save changes."));
+    mmToolTip(m_buttonSave, _("Save changes."));
 
     m_buttonRun = new wxButton(buttonPanel, wxID_EXECUTE, _("&Run"));
     buttonPanelSizer->Add(m_buttonRun, g_flagsH);
-    m_buttonRun->SetToolTip(_("Run selected report."));
+    mmToolTip(m_buttonRun, _("Run selected report."));
 
     wxButton* button_Close = new wxButton(buttonPanel, wxID_CLOSE, wxGetTranslation(g_CloseLabel));
     buttonPanelSizer->Add(button_Close, g_flagsH);
-    //button_Close->SetToolTip(_("Save changes before closing. Changes without Save will be lost."));
+    //mmToolTip(button_Close, _("Save changes before closing. Changes without Save will be lost."));
 
 }
 
@@ -439,11 +443,19 @@ void mmGeneralReportManager::createEditorTab(wxNotebook* editors_notebook, int t
 
     if (type == ID_SQL_CONTENT)
     {
-        wxBoxSizer *box_sizer3 = new wxBoxSizer(wxHORIZONTAL);
-        wxSplitterWindow *splitter_sql = new wxSplitterWindow(panel, wxID_ANY);
+        wxBoxSizer *sizermain = new wxBoxSizer(wxVERTICAL);
+        wxSplitterWindow *splittermain = new wxSplitterWindow(panel, wxID_ANY);
+        splittermain->SetMinimumPaneSize(50); 
+        sizermain->Add(splittermain, 1, wxEXPAND,0 );
+
+        wxPanel *pnl1 = new wxPanel(splittermain, wxID_ANY);
+        wxBoxSizer *bSizerp1 = new wxBoxSizer(wxVERTICAL);
+        pnl1->SetSizer(bSizerp1);
+
+        wxSplitterWindow *splitter_sql = new wxSplitterWindow(pnl1, wxID_ANY);
         splitter_sql->SetSashGravity(0.9);
-        splitter_sql->SetMinimumPaneSize(150); // Smalest size of panels
-        box_sizer3->Add(splitter_sql, g_flagsExpand);
+        splitter_sql->SetMinimumPaneSize(150); // Smallest size of panels
+        bSizerp1->Add(splitter_sql, g_flagsExpand);
 
         MinimalEditor* templateText = new MinimalEditor(splitter_sql, type);
 
@@ -454,10 +466,11 @@ void mmGeneralReportManager::createEditorTab(wxNotebook* editors_notebook, int t
 #endif
         m_dbView = new wxTreeCtrl(splitter_sql, wxID_ANY, wxDefaultPosition
             , wxDefaultSize, treeCtrlFlags);
+        mmThemeMetaColour(m_dbView, meta::COLOR_NAVPANEL);
+        mmThemeMetaColour(m_dbView, meta::COLOR_NAVPANEL_FONT, true);
 
         splitter_sql->SplitVertically(templateText, m_dbView);
         splitter_sql->SetSashPosition(500);
-        sizer->Add(box_sizer3, g_flagsExpand);
 
 #if wxUSE_DRAG_AND_DROP
         m_dbView->Connect(wxID_ANY, wxEVT_TREE_BEGIN_DRAG
@@ -465,11 +478,14 @@ void mmGeneralReportManager::createEditorTab(wxNotebook* editors_notebook, int t
             , nullptr, this);
 #endif // wxUSE_DRAG_AND_DROP
 
-        wxBoxSizer *box_sizer1 = new wxBoxSizer(wxVERTICAL);
+        wxPanel *pnl2 = new wxPanel(splittermain, wxID_ANY);
+        wxBoxSizer* bSizerp2 = new wxBoxSizer(wxVERTICAL);
+        pnl2->SetSizer(bSizerp2);
+
         wxBoxSizer *box_sizer2 = new wxBoxSizer(wxHORIZONTAL);
-        wxButton* buttonPlay = new wxButton(panel, ID_TEST, _("&Test"));
-        wxButton* buttonNewTemplate = new wxButton(panel, wxID_NEW, _("Create Template"));
-        wxStaticText *info = new wxStaticText(panel, wxID_INFO, "");
+        wxButton* buttonPlay = new wxButton(pnl2, ID_TEST, _("&Test"));
+        wxButton* buttonNewTemplate = new wxButton(pnl2, wxID_NEW, _("Create Template"));
+        wxStaticText *info = new wxStaticText(pnl2, wxID_INFO, "");
         buttonNewTemplate->Enable(false);
         box_sizer2->Add(buttonPlay);
         box_sizer2->AddSpacer(10);
@@ -477,11 +493,10 @@ void mmGeneralReportManager::createEditorTab(wxNotebook* editors_notebook, int t
         box_sizer2->AddSpacer(10);
         box_sizer2->Add(info, g_flagsExpand);
 
-        m_sqlListBox = new sqlListCtrl(this, panel, wxID_ANY);
-        box_sizer1->Add(box_sizer2, wxSizerFlags(g_flagsExpand).Proportion(0));
-        box_sizer1->Add(m_sqlListBox, g_flagsExpand);
-        sizer->Add(box_sizer1, wxSizerFlags(g_flagsExpand).Border(0).Proportion(0));
-        box_sizer1->SetMinSize(wxSize(-1, 100));
+        m_sqlListBox = new sqlListCtrl(this, pnl2, wxID_ANY);
+        bSizerp2->Add(box_sizer2);
+        bSizerp2->Add(m_sqlListBox, g_flagsExpand);
+        bSizerp2->SetMinSize(wxSize(-1, 100));
 
         // Populate database view
         std::vector<std::pair<wxString, wxArrayString>> sqlTableInfo;
@@ -494,6 +509,9 @@ void mmGeneralReportManager::createEditorTab(wxNotebook* editors_notebook, int t
                 m_dbView->AppendItem(id, c);
         }
         m_dbView->Expand(root_id);
+
+        sizer->Add(sizermain, g_flagsExpand);
+        splittermain->SplitHorizontally(pnl1, pnl2);
     }
     else
     {

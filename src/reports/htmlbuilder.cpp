@@ -1,6 +1,7 @@
 /*******************************************************
  Copyright (C) 2006 Madhan Kanagavel, Paulo Lopes
  copyright (C) 2012 Nikolay
+ Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -27,6 +28,9 @@
 
 namespace tags
 {
+    static const char END_SIMPLE[] = R"(</body>)";
+    static const char HTML_SIMPLE[] = R"(<body %s %s>)";
+
     static const wxString END = R"(
 </body>
 <script>
@@ -109,12 +113,21 @@ mmHTMLBuilder::mmHTMLBuilder()
         , today_.date.FormatISOTime());
 }
 
-void mmHTMLBuilder::init()
+void mmHTMLBuilder::init(bool simple)
 {
-    html_ = wxString::Format(wxString::FromUTF8(tags::HTML)
-        , mmex::getProgramName()
-        , wxString::Format("%d", Option::instance().getHtmlFontSize())
-    );
+    if (simple)
+    {
+        wxString bg = mmThemeMetaString(meta::COLOR_HTMLPANEL_BACK);
+        wxString fg = mmThemeMetaString(meta::COLOR_HTMLPANEL_FORE);
+        html_ += wxString::Format(tags::HTML_SIMPLE
+                    , bg.IsEmpty() ? "" : wxString::Format("bgcolor='%s';", bg)
+                    , fg.IsEmpty() ? "" : wxString::Format("text='%s';", fg));
+    } else
+    {
+        html_ = wxString::Format(wxString::FromUTF8(tags::HTML)
+            , mmex::getProgramName()
+            , wxString::Format("%d", Option::instance().getHtmlFontSize()));
+    }
 }
 
 void mmHTMLBuilder::showUserName()
@@ -361,9 +374,9 @@ void mmHTMLBuilder::addTableRow(const wxString& label, double data)
     this->endTableRow();
 }
 
-void mmHTMLBuilder::end()
+void mmHTMLBuilder::end(bool simple)
 {
-    html_ += tags::END;
+    html_ += simple ? tags::END_SIMPLE : tags::END;
 }
 void mmHTMLBuilder::addDivContainer(const wxString& style)
 {
@@ -417,7 +430,7 @@ void mmHTMLBuilder::startTableRow(const wxString& color)
 
 void mmHTMLBuilder::startAltTableRow()
 {
-    startTableRow("whitesmoke");
+    startTableRow(mmThemeMetaString(meta::COLOR_REPORT_ALTROW));
 }
 
 void mmHTMLBuilder::startTotalTableRow()
@@ -509,7 +522,8 @@ void mmHTMLBuilder::addChart(const GraphData& gd)
                 chartWidth = 70;
     };
 
-    htmlChart += wxString::Format("chart: { type: '%s', toolbar: { tools: { download: false } }, width: '%i%%' }", gtype, chartWidth);
+    htmlChart += wxString::Format("chart: { type: '%s', foreColor: '%s', toolbar: { tools: { download: false } }, width: '%i%%' }", 
+                    gtype, mmThemeMetaString(meta::COLOR_REPORT_FORECOLOR), chartWidth);
     htmlChart += wxString::Format(", title: { text: '%s'}", gd.title);
 
     wxString toolTipFormatter;

@@ -32,7 +32,7 @@ public:
     using Model<DB_Table_ACCOUNTLIST_V1>::get;
 
     enum STATUS_ENUM { OPEN = 0, CLOSED };
-    enum TYPE { CASH = 0, CHECKING, CREDIT_CARD, LOAN, TERM, INVESTMENT, ASSET, SHARES };
+    enum TYPE { CASH = 0, CHECKING, CREDIT_CARD, LOAN, TERM, INVESTMENT, ASSET, SHARES, MAX};
 
     static const std::vector<std::pair<STATUS_ENUM, wxString> > STATUS_CHOICES;
     static const std::vector<std::pair<TYPE, wxString> > TYPE_CHOICES;
@@ -114,6 +114,8 @@ public:
     static bool BoolOf(int value);
     static bool is_positive(int value);
     static wxDateTime get_date_by_string(const wxString& date_str);
+
+    const Data_Set FilterAccounts(const wxString& account_pattern, bool skip_closed = false);
 
 };
 

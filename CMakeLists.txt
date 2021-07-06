@@ -17,9 +17,9 @@
 # ./resources/mmex.rc
 # ---------------------------------------------------------------------------
 
-set(MMEX_VERSION 1.6.0)
-SET(MMEX_VERSION_ALPHA 1)
-SET(MMEX_VERSION_BETA -1)
+set(MMEX_VERSION 1.5.4)
+SET(MMEX_VERSION_ALPHA -1)
+SET(MMEX_VERSION_BETA 1)
 SET(MMEX_VERSION_RC -1)
 
 # ---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ endif()
 
 # --------- cmake --grapgviz settings ---------
 file(WRITE "${CMAKE_BINARY_DIR}/CMakeGraphVizOptions.cmake" "
-    set(GRAPHVIZ_GRAPH_NAME \"MMEX build dependency graph\")
+    set(GRAPHVIZ_GRAPH_NAME "MMEX build dependency graph")
     set(GRAPHVIZ_GENERATE_PER_TARGET FALSE)
     set(GRAPHVIZ_GENERATE_DEPENDERS FALSE)
 ")
@@ -441,11 +441,14 @@ file(GLOB THEME_SIMPLEBLACK_FILES "${PROJECT_SOURCE_DIR}/themes/system-themes/si
 create_zip("${CMAKE_CURRENT_BINARY_DIR}/simple-black.mmextheme" "${THEME_SIMPLEBLACK_FILES}" "${PROJECT_SOURCE_DIR}/themes/system-themes/simple-black/")
 file(GLOB THEME_YELLOWBLUE_FILES "${PROJECT_SOURCE_DIR}/themes/system-themes/yellow-blue/*")
 create_zip("${CMAKE_CURRENT_BINARY_DIR}/yellow-blue.mmextheme" "${THEME_YELLOWBLUE_FILES}" "${PROJECT_SOURCE_DIR}/themes/system-themes/yellow-blue/")
+file(GLOB THEME_DARKMODE_FILES "${PROJECT_SOURCE_DIR}/themes/system-themes/dark-mode/*")
+create_zip("${CMAKE_CURRENT_BINARY_DIR}/dark-mode.mmextheme" "${THEME_DARKMODE_FILES}" "${PROJECT_SOURCE_DIR}/themes/system-themes/dark-mode/")
 
 add_custom_target(generate_theme_default ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/default.mmextheme"
                                                      "${CMAKE_CURRENT_BINARY_DIR}/colorful.mmextheme"
                                                      "${CMAKE_CURRENT_BINARY_DIR}/simple-black.mmextheme"
-                                                     "${CMAKE_CURRENT_BINARY_DIR}/yellow-blue.mmextheme")
+                                                     "${CMAKE_CURRENT_BINARY_DIR}/yellow-blue.mmextheme"
+                                                     "${CMAKE_CURRENT_BINARY_DIR}/dark-mode.mmextheme")
 ## Tuning for VisualStudio IDE ##
 if(NOT CMAKE_VERSION VERSION_LESS 3.6)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${MMEX_EXE})
@@ -585,6 +588,7 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/colorful.mmextheme"
     "${CMAKE_CURRENT_BINARY_DIR}/simple-black.mmextheme"
     "${CMAKE_CURRENT_BINARY_DIR}/yellow-blue.mmextheme"
+    "${CMAKE_CURRENT_BINARY_DIR}/dark-mode.mmextheme"
     DESTINATION "${MMEX_RES_DIR}")
 
 if(LINUX)

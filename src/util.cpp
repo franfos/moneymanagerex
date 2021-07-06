@@ -27,6 +27,7 @@ Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
 #include "build.h"
 #include "util.h"
 #include "constants.h"
+#include "option.h"
 #include "platfdep.h"
 #include "paths.h"
 #include "validators.h"
@@ -49,7 +50,7 @@ wxString JSON_PrettyFormated(rapidjson::Document& j_doc)
     PrettyWriter<StringBuffer> j_writer(j_buffer);
     j_doc.Accept(j_writer);
 
-    return j_buffer.GetString();
+    return wxString::FromUTF8(j_buffer.GetString());
 }
 
 wxString JSON_Formated(rapidjson::Document& j_doc)
@@ -58,7 +59,7 @@ wxString JSON_Formated(rapidjson::Document& j_doc)
     Writer<StringBuffer> j_writer(j_buffer);
     j_doc.Accept(j_writer);
 
-    return j_buffer.GetString();
+    return wxString::FromUTF8(j_buffer.GetString());
 }
 
 //----------------------------------------------------------------------------
@@ -133,15 +134,15 @@ const wxString inQuotes(const wxString& l, const wxString& delimiter)
     return label;
 }
 
-void mmLoadColorsFromDatabase()
+void mmLoadColorsFromDatabase(bool def)
 {
-    mmColors::userDefColor1 = Model_Infotable::instance().GetColourSetting("USER_COLOR1", wxColour(246, 144, 144));
-    mmColors::userDefColor2 = Model_Infotable::instance().GetColourSetting("USER_COLOR2", wxColour(229, 196, 146));
-    mmColors::userDefColor3 = Model_Infotable::instance().GetColourSetting("USER_COLOR3", wxColour(245, 237, 149));
-    mmColors::userDefColor4 = Model_Infotable::instance().GetColourSetting("USER_COLOR4", wxColour(186, 226, 185));
-    mmColors::userDefColor5 = Model_Infotable::instance().GetColourSetting("USER_COLOR5", wxColour(135, 190, 219));
-    mmColors::userDefColor6 = Model_Infotable::instance().GetColourSetting("USER_COLOR6", wxColour(172, 167, 239));
-    mmColors::userDefColor7 = Model_Infotable::instance().GetColourSetting("USER_COLOR7", wxColour(212, 138, 215));
+    mmColors::userDefColor1 = def ? wxColour(246, 144, 144) : Model_Infotable::instance().GetColourSetting("USER_COLOR1", wxColour(246, 144, 144));
+    mmColors::userDefColor2 = def ? wxColour(229, 196, 146) : Model_Infotable::instance().GetColourSetting("USER_COLOR2", wxColour(229, 196, 146));
+    mmColors::userDefColor3 = def ? wxColour(245, 237, 149) : Model_Infotable::instance().GetColourSetting("USER_COLOR3", wxColour(245, 237, 149));
+    mmColors::userDefColor4 = def ? wxColour(186, 226, 185) : Model_Infotable::instance().GetColourSetting("USER_COLOR4", wxColour(186, 226, 185));
+    mmColors::userDefColor5 = def ? wxColour(135, 190, 219) : Model_Infotable::instance().GetColourSetting("USER_COLOR5", wxColour(135, 190, 219));
+    mmColors::userDefColor6 = def ? wxColour(172, 167, 239) : Model_Infotable::instance().GetColourSetting("USER_COLOR6", wxColour(172, 167, 239));
+    mmColors::userDefColor7 = def ? wxColour(212, 138, 215) : Model_Infotable::instance().GetColourSetting("USER_COLOR7", wxColour(212, 138, 215));
 }
 
 wxColour mmColors::userDefColor1;
@@ -331,6 +332,11 @@ const wxString mmGetDateForDisplay(const wxString &iso_date, const wxString& dat
     auto it = dateLookup.find(iso_date);
     if (it != dateLookup.end())
         return it->second; // The stored formatted date.
+
+    wxRegEx pattern(R"([0-9]{4}\-[0-9]{2}\-[0-9]{2})");
+    if (!pattern.Matches(iso_date)) {
+        return "";
+    }
 
     // Format date, store it and return it.
     wxString date_str = dateFormat;
@@ -1072,7 +1078,7 @@ const wxString getProgramDescription(int type)
         << " (SQLite " << wxSQLite3Database::GetVersion() << ")" << eol
         << bull + "RapidJSON " << RAPIDJSON_VERSION_STRING << eol
         << bull + LUA_RELEASE << eol
-        << bull + "lunasvg " << eol
+        << bull + "lunasvg v2.0.1" << eol
         << bull + curl_version() << eol
         << bull + GETTEXT_VERSION << eol
         << bull + "apexcharts.js" << eol
@@ -1351,4 +1357,26 @@ wxImageList* createImageList()
     int x = Option::instance().getIconSize();
     return(new wxImageList(x, x, false));   // No mask creation, not needed and causes image correuption on Mac
 
+}
+
+const wxColor* bestFontColour(wxColour background)
+{
+    // http://stackoverflow.com/a/3943023/112731
+
+    int r = static_cast<int>(background.Red());
+    int g = static_cast<int>(background.Green());
+    int b = static_cast<int>(background.Blue());
+    int k = (r * 299 + g * 587 + b * 114);
+
+    wxLogDebug("best FontColour: [%s] -> r=%d, g=%d, b=%d | k: %d"
+        , background.GetAsString(wxC2S_HTML_SYNTAX), r, g, b, k);
+
+    return (k > 149000) ? wxBLACK : wxWHITE;
+}
+
+// Ideally we would use wxToolTip::Enable() to enable or disable tooltips globally.
+// but this only works on some platforms! 
+void mmToolTip(wxWindow* widget, wxString tip)
+{
+    if (Option::instance().getShowToolTips()) widget->SetToolTip(tip);
 }

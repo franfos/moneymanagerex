@@ -28,6 +28,7 @@
 #include "platfdep.h"
 #include "util.h"
 #include "option.h"
+#include "util.h"
 #include "webapp.h"
 #include "parsers.h"
 
@@ -435,17 +436,17 @@ void mmUnivCSVDialog::CreateControls()
     const wxString& file_tooltip = IsImporter()
         ? (IsXML() ? _("Choose XML data file to Import") : _("Choose CSV data file to Import"))
         : (IsXML() ? _("Choose XML data file to Export") : _("Choose CSV data file to Export"));
-    button_browse->SetToolTip(file_tooltip);
+    mmToolTip(button_browse, file_tooltip);
 
-    m_setting_name_ctrl_->SetToolTip(_("Template name"));
-    itemButton_Save->SetToolTip(_("Save Template"));
-    itemButtonClear->SetToolTip(_("Clear Settings"));
-    itemButton_standard->SetToolTip(_("MMEX standard format"));
-    itemButton_MoveUp->SetToolTip(_("Move Up"));
-    itemButton_MoveDown->SetToolTip(_("Move &Down"));
-    if (IsCSV()) m_textDelimiter->SetToolTip(_("Specify the delimiter to use when importing/exporting CSV files"));
-    if (IsImporter()) itemButton_Import_->SetToolTip(_("Import File"));
-    if (!IsImporter()) itemButton_Import_->SetToolTip(_("Export File"));
+    mmToolTip(m_setting_name_ctrl_, _("Template name"));
+    mmToolTip(itemButton_Save, _("Save Template"));
+    mmToolTip(itemButtonClear, _("Clear Settings"));
+    mmToolTip(itemButton_standard, _("MMEX standard format"));
+    mmToolTip(itemButton_MoveUp, _("Move Up"));
+    mmToolTip(itemButton_MoveDown, _("Move &Down"));
+    if (IsCSV()) mmToolTip(m_textDelimiter, _("Specify the delimiter to use when importing/exporting CSV files"));
+    if (IsImporter()) mmToolTip(itemButton_Import_, _("Import File"));
+    if (!IsImporter()) mmToolTip(itemButton_Import_, _("Export File"));
 
 }
 
@@ -497,7 +498,7 @@ void mmUnivCSVDialog::SetSettings(const wxString &json_data)
 
     //Setting name
     Value& template_name = GetValueByPointerWithDefault(json_doc, "/SETTING_NAME", "");
-    const wxString setting_name =template_name.IsString() ? wxString::FromUTF8(template_name.GetString()) : "??";
+    const wxString setting_name = template_name.IsString() ? wxString::FromUTF8(template_name.GetString()) : "??";
     m_setting_name_ctrl_->ChangeValue(setting_name);
 
     //Date Mask
@@ -1134,8 +1135,6 @@ void mmUnivCSVDialog::OnExport(wxCommandEvent& WXUNUSED(event))
     const auto split = Model_Splittransaction::instance().get_all();
     int fromAccountID = from_account->ACCOUNTID;
 
-    wxDateTime trx_date;
-
     long numRecords = 0;
     Model_Currency::Data* currency = Model_Account::currency(from_account);
 
@@ -1196,8 +1195,7 @@ void mmUnivCSVDialog::OnExport(wxCommandEvent& WXUNUSED(event))
                 switch (*sit)
                 {
                 case UNIV_CSV_DATE:
-                    trx_date = Model_Checking::TRANSDATE(pBankTransaction);
-                    entry = mmGetDateForDisplay(trx_date.FormatISODate());
+                    entry = mmGetDateForDisplay(Model_Checking::TRANSDATE(pBankTransaction).FormatISODate(), date_format_);
                     break;
                 case UNIV_CSV_PAYEE:
                     entry = tran.real_payee_name(fromAccountID);
@@ -1414,7 +1412,7 @@ void mmUnivCSVDialog::update_preview()
                         {
                         case UNIV_CSV_DATE:
                         {
-                            text << inQuotes(mmGetDateForDisplay(Model_Checking::TRANSDATE(pBankTransaction).FormatISODate(),date_format_), delimit);
+                            text << inQuotes(mmGetDateForDisplay(Model_Checking::TRANSDATE(pBankTransaction).FormatISODate(), date_format_), delimit);
                             break;
                         }
                         case UNIV_CSV_PAYEE:

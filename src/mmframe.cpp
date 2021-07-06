@@ -91,6 +91,7 @@ EVT_MENU(MENU_EXPORT_CSV, mmGUIFrame::OnExportToCSV)
 EVT_MENU(MENU_EXPORT_XML, mmGUIFrame::OnExportToXML)
 EVT_MENU(MENU_EXPORT_QIF, mmGUIFrame::OnExportToQIF)
 EVT_MENU(MENU_EXPORT_JSON, mmGUIFrame::OnExportToJSON)
+EVT_MENU(MENU_EXPORT_MMEX, mmGUIFrame::OnExportToMMEX)
 EVT_MENU(MENU_IMPORT_QIF, mmGUIFrame::OnImportQIF)
 EVT_MENU(MENU_IMPORT_UNIVCSV, mmGUIFrame::OnImportUniversalCSV)
 EVT_MENU(MENU_IMPORT_XML, mmGUIFrame::OnImportXML)
@@ -127,6 +128,7 @@ EVT_MENU(MENU_ASSETS, mmGUIFrame::OnAssets)
 EVT_MENU(MENU_CURRENCY, mmGUIFrame::OnCurrency)
 EVT_MENU(MENU_RATES, mmGUIFrame::OnRates)
 EVT_MENU(MENU_TRANSACTIONREPORT, mmGUIFrame::OnTransactionReport)
+EVT_MENU(MENU_REFRESH_WEBAPP, mmGUIFrame::OnRefreshWebApp)
 EVT_MENU(wxID_BROWSE, mmGUIFrame::OnCustomFieldsManager)
 EVT_MENU(wxID_VIEW_LIST, mmGUIFrame::OnGeneralReportManager)
 EVT_MENU(MENU_THEME_MANAGER, mmGUIFrame::OnThemeManager)
@@ -139,6 +141,8 @@ EVT_MENU(MENU_VIEW_BUDGET_FINANCIAL_YEARS, mmGUIFrame::OnViewBudgetFinancialYear
 EVT_MENU(MENU_VIEW_BUDGET_TRANSFER_TOTAL, mmGUIFrame::OnViewBudgetTransferTotal)
 EVT_MENU(MENU_VIEW_BUDGET_CATEGORY_SUMMARY, mmGUIFrame::OnViewBudgetCategorySummary)
 EVT_MENU(MENU_VIEW_IGNORE_FUTURE_TRANSACTIONS, mmGUIFrame::OnViewIgnoreFutureTransactions)
+EVT_MENU(MENU_VIEW_SHOW_TOOLTIPS, mmGUIFrame::OnViewShowToolTips)
+EVT_MENU(MENU_VIEW_SHOW_MONEYTIPS, mmGUIFrame::OnViewShowMoneyTips)
 
 EVT_MENU(MENU_CATEGORY_RELOCATION, mmGUIFrame::OnCategoryRelocation)
 EVT_MENU(MENU_PAYEE_RELOCATION, mmGUIFrame::OnPayeeRelocation)
@@ -165,6 +169,7 @@ EVT_MENU(MENU_TREEPOPUP_ACCOUNT_DELETE, mmGUIFrame::OnDeleteAccount)
 EVT_MENU(MENU_TREEPOPUP_ACCOUNT_EDIT, mmGUIFrame::OnEditAccount)
 EVT_MENU(MENU_TREEPOPUP_ACCOUNT_LIST, mmGUIFrame::OnAccountList)
 EVT_MENU(MENU_TREEPOPUP_ACCOUNT_EXPORT2CSV, mmGUIFrame::OnExportToCSV)
+EVT_MENU(MENU_TREEPOPUP_ACCOUNT_EXPORT2MMEX, mmGUIFrame::OnExportToMMEX)
 EVT_MENU(MENU_TREEPOPUP_ACCOUNT_EXPORT2XML, mmGUIFrame::OnExportToXML)
 EVT_MENU(MENU_TREEPOPUP_ACCOUNT_EXPORT2QIF, mmGUIFrame::OnExportToQIF)
 EVT_MENU(MENU_TREEPOPUP_ACCOUNT_EXPORT2JSON, mmGUIFrame::OnExportToJSON)
@@ -613,12 +618,15 @@ void mmGUIFrame::menuEnableItems(bool enable)
     menuBar_->FindItem(MENU_ASSETS)->Enable(enable);
     menuBar_->FindItem(MENU_BUDGETSETUPDIALOG)->Enable(enable);
     menuBar_->FindItem(MENU_TRANSACTIONREPORT)->Enable(enable);
+    menuBar_->FindItem(MENU_REFRESH_WEBAPP)->Enable(enable && mmWebApp::WebApp_CheckEnabled());
 
     menuBar_->FindItem(MENU_VIEW_HIDE_SHARE_ACCOUNTS)->Enable(enable);
     menuBar_->FindItem(MENU_VIEW_BUDGET_FINANCIAL_YEARS)->Enable(enable);
     menuBar_->FindItem(MENU_VIEW_BUDGET_TRANSFER_TOTAL)->Enable(enable);
     menuBar_->FindItem(MENU_VIEW_BUDGET_CATEGORY_SUMMARY)->Enable(enable);
     menuBar_->FindItem(MENU_VIEW_IGNORE_FUTURE_TRANSACTIONS)->Enable(enable);
+    menuBar_->FindItem(MENU_VIEW_SHOW_TOOLTIPS)->Enable(enable);
+    menuBar_->FindItem(MENU_VIEW_SHOW_MONEYTIPS)->Enable(enable);
 
     menuBar_->FindItem(MENU_DB_VACUUM)->Enable(enable);
     menuBar_->FindItem(MENU_DB_DEBUG)->Enable(enable);
@@ -804,17 +812,17 @@ void mmGUIFrame::updateNavTreeControl()
     if (m_db)
     {
         /* Start Populating the dynamic data */
-        wxString vAccts = Model_Setting::instance().ViewAccounts();
-        wxASSERT(vAccts == VIEW_ACCOUNTS_ALL_STR || vAccts == VIEW_ACCOUNTS_FAVORITES_STR
-            || vAccts == VIEW_ACCOUNTS_OPEN_STR || vAccts == VIEW_ACCOUNTS_CLOSED_STR);
+        m_temp_view = Model_Setting::instance().GetViewAccounts();
+        wxASSERT(m_temp_view == VIEW_ACCOUNTS_ALL_STR || m_temp_view == VIEW_ACCOUNTS_FAVORITES_STR
+            || m_temp_view == VIEW_ACCOUNTS_OPEN_STR || m_temp_view == VIEW_ACCOUNTS_CLOSED_STR);
 
         for (const auto& account : Model_Account::instance().all(Model_Account::COL_ACCOUNTNAME))
         {
-            if ((vAccts == VIEW_ACCOUNTS_OPEN_STR) && (Model_Account::status(account) != Model_Account::OPEN))
+            if ((m_temp_view == VIEW_ACCOUNTS_OPEN_STR) && (Model_Account::status(account) != Model_Account::OPEN))
                 continue;
-            else if (vAccts == VIEW_ACCOUNTS_FAVORITES_STR && !Model_Account::FAVORITEACCT(account))
+            else if (m_temp_view == VIEW_ACCOUNTS_CLOSED_STR && (Model_Account::status(account) == Model_Account::OPEN))
                 continue;
-            else if (vAccts == VIEW_ACCOUNTS_CLOSED_STR && (Model_Account::status(account) == Model_Account::OPEN))
+            else if (m_temp_view == VIEW_ACCOUNTS_FAVORITES_STR && !Model_Account::FAVORITEACCT(account))
                 continue;
 
             int selectedImage = Option::instance().AccountImageId(account.ACCOUNTID);
@@ -877,7 +885,7 @@ void mmGUIFrame::updateNavTreeControl()
 
         loadNavigationTreeItemsStatusFromJson();
 
-       if (!m_nav_tree_ctrl->ItemHasChildren(favourites)) {
+        if (!m_nav_tree_ctrl->ItemHasChildren(favourites)) {
             m_nav_tree_ctrl->Delete(favourites);
         }
         if (!m_nav_tree_ctrl->ItemHasChildren(accounts)) {
@@ -1257,24 +1265,25 @@ void mmGUIFrame::showTreePopupMenu(const wxTreeItemId& id, const wxPoint& pt)
     }
     else
     {
-        if (iData->getString() == "item@Budgeting")
+        const auto str = iData->getString();
+        if (str == "item@Budgeting")
         {
             wxCommandEvent e;
             OnBudgetSetupDialog(e);
         }
-        else if (iData->getString() == "item@Reports")
+        else if (str == "item@Reports")
         {
             wxMenu menu;
             menu.Append(wxID_VIEW_LIST, _("General Report Manager"));
             PopupMenu(&menu, pt);
         }
-        else if (iData->getString() == "item@Favorites" ||
-            iData->getString() == "item@Bank Accounts" ||
-            iData->getString() == "item@Cash Accounts" ||
-            iData->getString() == "item@Loan Accounts" ||
-            iData->getString() == "item@Term Accounts" ||
-            iData->getString() == "item@Credit Card Accounts" ||
-            iData->getString() == "item@Stocks")
+        else if (str == "item@Favourites" ||
+            str == "item@Bank Accounts" ||
+            str == "item@Cash Accounts" ||
+            str == "item@Loan Accounts" ||
+            str == "item@Term Accounts" ||
+            str == "item@Credit Card Accounts" ||
+            str == "item@Stocks")
         {
             // Create for Account types: Bank, Cash, Loan, Credit Card, Term & Stocks 
             wxMenu menu;
@@ -1285,7 +1294,7 @@ void mmGUIFrame::showTreePopupMenu(const wxTreeItemId& id, const wxPoint& pt)
             menu.AppendSeparator();
 
             // Create only for Account types: Bank, Cash, Loan & Credit Card
-            if ((iData->getString() != "item@Term Accounts") && (iData->getString() != "item@Stocks"))
+            if ((str != "item@Term Accounts") && (str != "item@Stocks"))
             {
                 wxMenu* importFrom = new wxMenu;
                 importFrom->Append(MENU_TREEPOPUP_ACCOUNT_IMPORTUNIVCSV, _("&CSV Files..."));
@@ -1294,6 +1303,7 @@ void mmGUIFrame::showTreePopupMenu(const wxTreeItemId& id, const wxPoint& pt)
                 menu.AppendSubMenu(importFrom, _("&Import"));
                 wxMenu* exportTo = new wxMenu;
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2CSV, _("&CSV Files..."));
+                exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2MMEX, _("&MMEX CSV Files..."));
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2XML, _("&XML Files..."));
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2QIF, _("&QIF Files..."));
                 exportTo->Append(MENU_TREEPOPUP_ACCOUNT_EXPORT2JSON, _("&JSON Files..."));
@@ -1302,10 +1312,11 @@ void mmGUIFrame::showTreePopupMenu(const wxTreeItemId& id, const wxPoint& pt)
             }
 
             wxMenu* viewAccounts = new wxMenu;
-            viewAccounts->Append(MENU_TREEPOPUP_ACCOUNT_VIEWALL, _("All"));
-            viewAccounts->Append(MENU_TREEPOPUP_ACCOUNT_VIEWFAVORITE, _("Favorites"));
-            viewAccounts->Append(MENU_TREEPOPUP_ACCOUNT_VIEWOPEN, _("Open"));
-            viewAccounts->Append(MENU_TREEPOPUP_ACCOUNT_VIEWCLOSED, _("Closed"));
+            viewAccounts->AppendRadioItem(MENU_TREEPOPUP_ACCOUNT_VIEWALL, _("All"))->Check(m_temp_view == VIEW_ACCOUNTS_ALL_STR);
+            viewAccounts->AppendRadioItem(MENU_TREEPOPUP_ACCOUNT_VIEWFAVORITE, _("Favorites"))->Check(m_temp_view == VIEW_ACCOUNTS_FAVORITES_STR);
+            viewAccounts->AppendRadioItem(MENU_TREEPOPUP_ACCOUNT_VIEWOPEN, _("Open"))->Check(m_temp_view == VIEW_ACCOUNTS_OPEN_STR);
+            viewAccounts->AppendRadioItem(MENU_TREEPOPUP_ACCOUNT_VIEWCLOSED, _("Closed"))->Check(m_temp_view == VIEW_ACCOUNTS_CLOSED_STR);
+
             menu.AppendSubMenu(viewAccounts, _("Accounts Visible"));
             PopupMenu(&menu, pt);
         }
@@ -1317,17 +1328,19 @@ void mmGUIFrame::OnViewAccountsTemporaryChange(wxCommandEvent& e)
 {
     int evt_id = e.GetId();
     //Get current settings for view accounts
-    const wxString vAccts = Model_Setting::instance().ViewAccounts();
-    wxString temp_view = VIEW_ACCOUNTS_ALL_STR;
+    const wxString vAccts = Model_Setting::instance().GetViewAccounts();
+    if (m_temp_view.empty())
+        m_temp_view = vAccts;
+
     //Set view ALL & Refresh Navigation Panel
     switch (evt_id)
     {
-    case MENU_TREEPOPUP_ACCOUNT_VIEWALL: temp_view = VIEW_ACCOUNTS_ALL_STR; break;
-    case MENU_TREEPOPUP_ACCOUNT_VIEWFAVORITE: temp_view = VIEW_ACCOUNTS_FAVORITES_STR; break;
-    case MENU_TREEPOPUP_ACCOUNT_VIEWOPEN: temp_view = VIEW_ACCOUNTS_OPEN_STR; break;
-    case MENU_TREEPOPUP_ACCOUNT_VIEWCLOSED: temp_view = VIEW_ACCOUNTS_CLOSED_STR; break;
+    case MENU_TREEPOPUP_ACCOUNT_VIEWALL: m_temp_view = VIEW_ACCOUNTS_ALL_STR; break;
+    case MENU_TREEPOPUP_ACCOUNT_VIEWFAVORITE: m_temp_view = VIEW_ACCOUNTS_FAVORITES_STR; break;
+    case MENU_TREEPOPUP_ACCOUNT_VIEWOPEN: m_temp_view = VIEW_ACCOUNTS_OPEN_STR; break;
+    case MENU_TREEPOPUP_ACCOUNT_VIEWCLOSED: m_temp_view = VIEW_ACCOUNTS_CLOSED_STR; break;
     }
-    Model_Setting::instance().SetViewAccounts(temp_view);
+    Model_Setting::instance().SetViewAccounts(m_temp_view);
     updateNavTreeControl();
     createHomePage();
 
@@ -1364,6 +1377,7 @@ void mmGUIFrame::createMenu()
 
     wxMenu* exportMenu = new wxMenu;
     exportMenu->Append(MENU_EXPORT_CSV, _("&CSV Files..."), _("Export to CSV"));
+    exportMenu->Append(MENU_EXPORT_MMEX, _("&MMEX CSV Files..."), _("Export to fixed CSV"));
     exportMenu->Append(MENU_EXPORT_XML, _("&XML Files..."), _("Export to XML"));
     exportMenu->Append(MENU_EXPORT_QIF, _("&QIF Files..."), _("Export to QIF"));
     exportMenu->Append(MENU_EXPORT_JSON, _("&JSON Files..."), _("Export to JSON"));
@@ -1399,6 +1413,11 @@ void mmGUIFrame::createMenu()
         _("Budget Category Report: with &Summaries"), _("Include the category summaries in the Budget Category Summary"), wxITEM_CHECK);
     wxMenuItem* menuItemIgnoreFutureTransactions = new wxMenuItem(menuView, MENU_VIEW_IGNORE_FUTURE_TRANSACTIONS,
         _("Ignore F&uture Transactions"), _("Ignore Future transactions"), wxITEM_CHECK);
+    wxMenuItem* menuItemShowToolTips = new wxMenuItem(menuView, MENU_VIEW_SHOW_TOOLTIPS,
+        _("Show Tooltips"), _("Show Tooltips"), wxITEM_CHECK);
+    wxMenuItem* menuItemShowMoneyTips = new wxMenuItem(menuView, MENU_VIEW_SHOW_MONEYTIPS,
+        _("Show Money Tips"), _("Show Money Tips"), wxITEM_CHECK);
+
     //Add the menu items to the menu bar
     menuView->Append(menuItemToolbar);
     menuView->Append(menuItemLinks);
@@ -1410,6 +1429,9 @@ void mmGUIFrame::createMenu()
     menuView->Append(menuItemBudgetCategorySummary);
     menuView->AppendSeparator();
     menuView->Append(menuItemIgnoreFutureTransactions);
+    menuView->AppendSeparator();
+    menuView->Append(menuItemShowToolTips);
+    menuView->Append(menuItemShowMoneyTips);
     menuView->AppendSeparator();
 
 #if (wxMAJOR_VERSION >= 3 && wxMINOR_VERSION >= 0)
@@ -1542,6 +1564,11 @@ void mmGUIFrame::createMenu()
 
     menuTools->AppendSeparator();
 
+    wxMenuItem* menuItemWA = new wxMenuItem(menuTools, MENU_REFRESH_WEBAPP
+        , _("Refresh &WebApp"), _("Refresh WebApp"));
+    menuTools->Append(menuItemWA);
+    menuTools->AppendSeparator();
+
     wxMenuItem* menuItemOptions = new wxMenuItem(menuTools, wxID_PREFERENCES
         , _("&Options...\tCtrl-,"), _("Show the Options Dialog"));
     menuTools->Append(menuItemOptions);
@@ -1669,6 +1696,8 @@ void mmGUIFrame::createMenu()
     menuBar_->Check(MENU_VIEW_BUDGET_TRANSFER_TOTAL, Option::instance().BudgetIncludeTransfers());
     menuBar_->Check(MENU_VIEW_BUDGET_CATEGORY_SUMMARY, Option::instance().BudgetReportWithSummaries());
     menuBar_->Check(MENU_VIEW_IGNORE_FUTURE_TRANSACTIONS, Option::instance().getIgnoreFutureTransactions());
+    menuBar_->Check(MENU_VIEW_SHOW_TOOLTIPS, Option::instance().getShowToolTips());
+    menuBar_->Check(MENU_VIEW_SHOW_MONEYTIPS, Option::instance().getShowMoneyTips());
 }
 //----------------------------------------------------------------------------
 
@@ -1681,6 +1710,7 @@ void mmGUIFrame::CreateToolBar()
     long style = wxTB_FLAT | wxTB_NODIVIDER;
 
     toolBar_ = new wxToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, style, "ToolBar");
+    mmThemeMetaColour(toolBar_, meta::COLOR_LISTPANEL);
     toolBar_->SetToolBitmapSize(wxSize(toolbar_icon_size, toolbar_icon_size));  // adjust tool size to match the icon size being used
 
     toolBar_->AddTool(MENU_NEW, _("New"), mmBitmap(png::NEW_DB), _("New Database"));
@@ -2198,6 +2228,11 @@ void mmGUIFrame::OnExportToJSON(wxCommandEvent& /*event*/)
     mmQIFExportDialog dlg(this, mmQIFExportDialog::JSON);
     dlg.ShowModal();
 }
+void mmGUIFrame::OnExportToMMEX(wxCommandEvent& /*event*/)
+{
+    mmQIFExportDialog dlg(this, mmQIFExportDialog::CSV);
+    dlg.ShowModal();
+}
 //----------------------------------------------------------------------------
 
 void mmGUIFrame::OnImportQIF(wxCommandEvent& /*event*/)
@@ -2434,7 +2469,7 @@ void mmGUIFrame::OnTransactionReport(wxCommandEvent& /*event*/)
     mmFilterTransactionsDialog* dlg = new mmFilterTransactionsDialog(this);
     if (dlg->ShowModal() == wxID_OK)
     {
-        mmReportTransactions* rs = new mmReportTransactions(dlg->getAccountID(), dlg);
+        mmReportTransactions* rs = new mmReportTransactions(-1, dlg);
         createReportsPage(rs, true);
     }
     m_nav_tree_ctrl->Refresh();
@@ -2454,6 +2489,17 @@ void mmGUIFrame::OnThemeManager(wxCommandEvent& /*event*/)
 {
     mmThemesDialog dlg(this, _("Theme Manager"));
     dlg.ShowModal();
+}
+
+void mmGUIFrame::OnRefreshWebApp(wxCommandEvent& /*event*/)
+{
+    if (mmWebApp::MMEX_WebApp_UpdateAccount()
+            && mmWebApp::MMEX_WebApp_UpdateCategory()
+            && mmWebApp::MMEX_WebApp_UpdatePayee())
+        wxMessageBox(_("Accounts, Payees, and Categories Updated"), _("Refresh WebApp"), wxOK | wxICON_INFORMATION);
+    else
+        wxMessageBox(_("Issue encountered updating WebApp, check Web server and WebApp settings"),
+                _("Refresh WebApp"), wxOK | wxICON_ERROR);
 }
 
 void mmGUIFrame::OnGeneralReportManager(wxCommandEvent& /*event*/)
@@ -2480,6 +2526,8 @@ void mmGUIFrame::OnOptions(wxCommandEvent& /*event*/)
         menuBar_->FindItem(MENU_VIEW_BUDGET_TRANSFER_TOTAL)->Check(Option::instance().BudgetIncludeTransfers());
         menuBar_->FindItem(MENU_VIEW_BUDGET_CATEGORY_SUMMARY)->Check(Option::instance().BudgetReportWithSummaries());
         menuBar_->FindItem(MENU_VIEW_IGNORE_FUTURE_TRANSACTIONS)->Check(Option::instance().getIgnoreFutureTransactions());
+        menuBar_->FindItem(MENU_VIEW_SHOW_TOOLTIPS)->Check(Option::instance().getShowToolTips());
+        menuBar_->FindItem(MENU_VIEW_SHOW_MONEYTIPS)->Check(Option::instance().getShowMoneyTips());        
         menuBar_->Refresh();
         menuBar_->Update();
 
@@ -3184,6 +3232,20 @@ void mmGUIFrame::OnViewBudgetCategorySummary(wxCommandEvent& WXUNUSED(event))
 void mmGUIFrame::OnViewIgnoreFutureTransactions(wxCommandEvent& WXUNUSED(event))
 {
     Option::instance().IgnoreFutureTransactions(!Option::instance().getIgnoreFutureTransactions());
+    updateNavTreeControl();
+    createHomePage();
+}
+
+void mmGUIFrame::OnViewShowToolTips(wxCommandEvent& WXUNUSED(event))
+{
+    Option::instance().ShowToolTips(!Option::instance().getShowToolTips());
+    updateNavTreeControl();
+    createHomePage();
+}
+
+void mmGUIFrame::OnViewShowMoneyTips(wxCommandEvent& WXUNUSED(event))
+{
+    Option::instance().ShowMoneyTips(!Option::instance().getShowMoneyTips());
     updateNavTreeControl();
     createHomePage();
 }

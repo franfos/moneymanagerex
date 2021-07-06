@@ -134,11 +134,20 @@ void mmCurrencyDialog::fillControls()
         m_scale = log10(m_currency->SCALE);
         const wxString& scale_value = wxString::Format("%i", m_scale);
         scaleTx_->ChangeValue(scale_value);
-        if (!Model_Infotable::instance().GetStringInfo("LOCALE","").empty())
+
+        /*const wxString locale = Model_Infotable::instance().GetStringInfo("LOCALE", "");
+        if (!locale.empty())
         {
-            decTx_->Disable();
-            grpTx_->Disable();
-        }
+            try {
+                fmt::format(std::locale(locale.c_str()), "{:L}", 123);
+                decTx_->Disable();
+                grpTx_->Disable();
+            }
+            catch (...) {
+                //Do nothing
+            }
+        }*/
+
         m_currencySymbol->ChangeValue(m_currency->CURRENCY_SYMBOL);
 
         bool baseCurrency = (Option::instance().getBaseCurrencyID() == m_currency->CURRENCYID);
@@ -214,7 +223,7 @@ void mmCurrencyDialog::CreateControls()
         ConvRateTooltip = _("Conversion rate will be used in case no currency history has been found for the currency");
     else
         ConvRateTooltip = _("Fixed conversion rate");
-    baseConvRate_->SetToolTip(ConvRateTooltip);
+    mmToolTip(baseConvRate_, ConvRateTooltip);
     itemFlexGridSizer3->Add(baseConvRate_, g_flagsExpand);
 
     //--------------------------
@@ -232,11 +241,11 @@ void mmCurrencyDialog::CreateControls()
 
     wxButton* itemButton24 = new wxButton(this, wxID_OK, _("&OK "));
     itemBoxSizer22->Add(itemButton24, g_flagsH);
-    itemButton24->SetToolTip(_("Save any changes made"));
+    mmToolTip(itemButton24, _("Save any changes made"));
 
     wxButton* itemButton25 = new wxButton(this, wxID_CANCEL, wxGetTranslation(g_CloseLabel));
     itemBoxSizer22->Add(itemButton25, g_flagsH);
-    itemButton25->SetToolTip(_("Any changes will be lost without update"));
+    mmToolTip(itemButton25, _("Any changes will be lost without update"));
 }
 
 void mmCurrencyDialog::OnOk(wxCommandEvent& WXUNUSED(event))

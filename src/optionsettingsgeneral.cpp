@@ -32,6 +32,8 @@ wxBEGIN_EVENT_TABLE(OptionSettingsGeneral, wxPanel)
     EVT_BUTTON(ID_DIALOG_OPTIONS_BUTTON_CURRENCY, OptionSettingsGeneral::OnCurrency)
     EVT_CHOICE(ID_DIALOG_OPTIONS_WXCHOICE_DATE, OptionSettingsGeneral::OnDateFormatChanged)
     EVT_COMBOBOX(wxID_ANY, OptionSettingsGeneral::OnLocaleChanged)
+    EVT_MENU(wxID_ANY, OptionSettingsGeneral::OnChangeGUILanguage)
+    EVT_BUTTON(ID_DIALOG_OPTIONS_BUTTON_LANG, OptionSettingsGeneral::OnMouseLeftDown)
 wxEND_EVENT_TABLE()
 /*******************************************************/
 
@@ -72,33 +74,23 @@ void OptionSettingsGeneral::Create()
     wxString userName = Model_Infotable::instance().GetStringInfo("USERNAME", "");
     wxTextCtrl* userNameTextCtr = new wxTextCtrl(this, ID_DIALOG_OPTIONS_TEXTCTRL_USERNAME, userName);
     userNameTextCtr->SetMinSize(wxSize(200, -1));
-    userNameTextCtr->SetToolTip(_("The User Name is used as a title for the database."));
+    mmToolTip(userNameTextCtr, _("The User Name is used as a title for the database."));
     headerStaticBoxSizer->Add(userNameTextCtr, g_flagsExpand);
     generalPanelSizer->Add(headerStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
 
-    // Locale
-    wxStaticBox* localeStaticBox = new wxStaticBox(this, wxID_STATIC, _("Locale"));
-    wxStaticBoxSizer* localeStaticBoxSizer = new wxStaticBoxSizer(localeStaticBox, wxHORIZONTAL);
-    generalPanelSizer->Add(localeStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
+    // Language
+    auto language = static_cast<wxLanguage>(Model_Setting::instance().GetIntSetting(LANGUAGE_PARAMETER, wxLANGUAGE_UNKNOWN));
+    const auto langName = language == wxLANGUAGE_DEFAULT ? _("system default") : wxLocale::GetLanguageName(language);
 
-    const wxString locale = Model_Infotable::instance().GetStringInfo("LOCALE", "en_US.UTF-8");
+    wxStaticBox* langStaticBox = new wxStaticBox(this, wxID_STATIC, _("Language"));
+    SetBoldFont(langStaticBox);
+    wxStaticBoxSizer* langFormatStaticBoxSizer = new wxStaticBoxSizer(langStaticBox, wxHORIZONTAL);
+    generalPanelSizer->Add(langFormatStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
 
-    wxComboBox* itemListOfLocales = new wxComboBox(localeStaticBox, ID_DIALOG_OPTIONS_LOCALE, ""
-        , wxDefaultPosition, wxDefaultSize, g_locales());
-    itemListOfLocales->SetValue(locale);
-    itemListOfLocales->SetMinSize(wxSize(100, -1));
-    localeStaticBoxSizer->Add(itemListOfLocales, g_flagsH);
-
-    itemListOfLocales->Connect(ID_DIALOG_OPTIONS_LOCALE, wxEVT_COMMAND_TEXT_UPDATED
-        , wxCommandEventHandler(OptionSettingsGeneral::OnLocaleChanged), nullptr, this);
-
-    m_sample_value_text = new wxStaticText(localeStaticBox, wxID_STATIC, "redefined elsewhere");
-    localeStaticBoxSizer->Add(m_sample_value_text, wxSizerFlags(g_flagsH).Border(wxLEFT, 15));
-    wxString result;
-    doFormatDoubleValue(locale, result);
-    m_sample_value_text->SetLabelText(wxGetTranslation(result));
-
-    SetBoldFont(localeStaticBox);
+    wxButton* langButton = new wxButton(this, ID_DIALOG_OPTIONS_BUTTON_LANG, langName);
+    langButton->SetMinSize(wxSize(200, -1));
+    langFormatStaticBoxSizer->Add(langButton, g_flagsH);
+    mmToolTip(langButton, _("Change language used for MMEX GUI"));
 
     // Date Format Settings
     wxStaticBox* dateFormatStaticBox = new wxStaticBox(this, wxID_STATIC, _("Date Format"));
@@ -112,10 +104,10 @@ void OptionSettingsGeneral::Create()
         if (m_date_format == i.first) m_date_format_choice->SetStringSelection(i.second);
     }
     dateFormatStaticBoxSizer->Add(m_date_format_choice, g_flagsH);
-    m_date_format_choice->SetToolTip(_("Specify the date format for display"));
+    mmToolTip(m_date_format_choice, _("Specify the date format for display"));
 
     m_sample_date_text = new wxStaticText(dateFormatStaticBox, wxID_STATIC, "redefined elsewhere");
-    dateFormatStaticBoxSizer->Add(new wxStaticText(dateFormatStaticBox, wxID_STATIC, _("New date format sample:")), wxSizerFlags(g_flagsH).Border(wxLEFT, 15));
+    dateFormatStaticBoxSizer->Add(new wxStaticText(dateFormatStaticBox, wxID_STATIC, _("Date format sample:")), wxSizerFlags(g_flagsH).Border(wxLEFT, 15));
     dateFormatStaticBoxSizer->Add(m_sample_date_text, wxSizerFlags(g_flagsH).Border(wxLEFT, 5));
     m_sample_date_text->SetLabelText(mmGetDateForDisplay(wxDateTime::Now().FormatISODate()));
     SetBoldFont(dateFormatStaticBox);
@@ -132,18 +124,50 @@ void OptionSettingsGeneral::Create()
 
     Model_Currency::Data* currency = Model_Currency::instance().get(Option::instance().getBaseCurrencyID());
     wxString currName = currency ? currency->CURRENCYNAME : _("Set Currency");
-    wxButton* baseCurrencyButton = new wxButton(this, ID_DIALOG_OPTIONS_BUTTON_CURRENCY, currName, wxDefaultPosition, wxDefaultSize);
+    wxButton* baseCurrencyButton = new wxButton(this, ID_DIALOG_OPTIONS_BUTTON_CURRENCY);
+    baseCurrencyButton->SetMinSize(wxSize(200, -1));
     baseCurrencyButton->SetLabel(currName);
-    baseCurrencyButton->SetToolTip(_("Sets the database default Currency using the 'Currency Dialog'"));
+    mmToolTip(baseCurrencyButton, _("Sets the database default Currency using the 'Currency Dialog'"));
     currencyBaseSizer->Add(baseCurrencyButton, g_flagsH);
-    m_currencyStaticBoxSizer->Add(new wxStaticText(this, wxID_STATIC, _("Right click and select 'Set as Base Currency' in 'Currency Dialog'")),
+    m_currencyStaticBoxSizer->Add(new wxStaticText(this, wxID_STATIC
+        , _("Right click and select 'Set as Base Currency' in 'Currency Dialog'")),
         wxSizerFlags(g_flagsV).Border(wxTOP, 0).Border(wxLEFT, 5));
+
+    m_currencyStaticBoxSizer->AddSpacer(10);
+
+    { // Locale
+        const wxString locale = Model_Infotable::instance().GetStringInfo("LOCALE", "");
+
+        wxBoxSizer* localeBaseSizer = new wxBoxSizer(wxHORIZONTAL);
+        m_currencyStaticBoxSizer->Add(localeBaseSizer, wxSizerFlags(g_flagsV).Border(wxLEFT, 0));
+
+        m_itemListOfLocales = new wxComboBox(this, ID_DIALOG_OPTIONS_LOCALE, ""
+            , wxDefaultPosition, wxDefaultSize, g_locales());
+        m_itemListOfLocales->SetValue(locale);
+        m_itemListOfLocales->AutoComplete(g_locales());
+        m_itemListOfLocales->SetMinSize(wxSize(100, -1));
+        localeBaseSizer->Add(m_itemListOfLocales, g_flagsH);
+
+        m_sample_value_text = new wxStaticText(this, wxID_STATIC, "redefined elsewhere");
+        localeBaseSizer->Add(m_sample_value_text, wxSizerFlags(g_flagsH).Border(wxLEFT, 15));
+        wxString result;
+        doFormatDoubleValue(locale, result);
+        m_sample_value_text->SetLabelText(wxGetTranslation(result));
+
+        m_currencyStaticBoxSizer->Add(new wxStaticText(this, wxID_STATIC
+            , _("Format derived from locale.\n"
+                "Leave blank to manually set format via 'Currency Dialog | Edit'")),
+            wxSizerFlags(g_flagsV).Border(wxTOP, 0).Border(wxLEFT, 5));
+
+        m_itemListOfLocales->Connect(ID_DIALOG_OPTIONS_LOCALE, wxEVT_COMMAND_TEXT_UPDATED
+            , wxCommandEventHandler(OptionSettingsGeneral::OnLocaleChanged), nullptr, this);
+    }
 
     m_currencyStaticBoxSizer->AddSpacer(15);
 
     m_currency_history = new wxCheckBox(this, wxID_STATIC, _("Use currency history"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_currency_history->SetValue(Option::instance().getCurrencyHistoryEnabled());
-    m_currency_history->SetToolTip(_("Select to use currency history (one rate for each day), deselect to use a fixed rate"));
+    mmToolTip(m_currency_history, _("Select to use currency history (one rate for each day), deselect to use a fixed rate"));
     m_currencyStaticBoxSizer->Add(m_currency_history, g_flagsV);
 
     // Financial Year Settings
@@ -160,7 +184,7 @@ void OptionSettingsGeneral::Create()
     wxSpinCtrl *textFPSDay = new wxSpinCtrl(this, ID_DIALOG_OPTIONS_FINANCIAL_YEAR_START_DAY,
         wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 31, day);
     textFPSDay->SetValue(day);
-    textFPSDay->SetToolTip(_("Specify Day for start of financial year"));
+    mmToolTip(textFPSDay, _("Specify Day for start of financial year"));
 
     financialYearStaticBoxSizerGrid->Add(textFPSDay, g_flagsH);
 
@@ -176,19 +200,19 @@ void OptionSettingsGeneral::Create()
 
     int monthItem = Model_Infotable::instance().GetIntInfo("FINANCIAL_YEAR_START_MONTH", 7);
     m_month_selection->SetSelection(monthItem - 1);
-    m_month_selection->SetToolTip(_("Specify month for start of financial year"));
+    mmToolTip(m_month_selection, _("Specify month for start of financial year"));
 
     // Misc settings
     generalPanelSizer->AddSpacer(15);
 
     m_use_org_date_copy_paste = new wxCheckBox(this, wxID_STATIC, _("Use Original Date when Pasting Transactions"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_use_org_date_copy_paste->SetValue(GetIniDatabaseCheckboxValue(INIDB_USE_ORG_DATE_COPYPASTE, false));
-    m_use_org_date_copy_paste->SetToolTip(_("Select whether to use the original transaction date or current date when copying/pasting transactions"));
+    mmToolTip(m_use_org_date_copy_paste, _("Select whether to use the original transaction date or current date when copying/pasting transactions"));
     generalPanelSizer->Add(m_use_org_date_copy_paste, g_flagsV);
 
     m_use_sound = new wxCheckBox(this, wxID_STATIC, _("Use Transaction Sound"), wxDefaultPosition, wxDefaultSize, wxCHK_2STATE);
     m_use_sound->SetValue(GetIniDatabaseCheckboxValue(INIDB_USE_TRANSACTION_SOUND, true));
-    m_use_sound->SetToolTip(_("Select whether to use sounds when entering transactions"));
+    mmToolTip(m_use_sound, _("Select whether to use sounds when entering transactions"));
     generalPanelSizer->Add(m_use_sound, g_flagsV);
 }
 
@@ -253,6 +277,10 @@ bool OptionSettingsGeneral::SaveSettings()
     if (doFormatDoubleValue(cbln->GetValue(), value)) {
         Option::instance().LocaleName(cbln->GetValue());
     }
+    else {
+        mmErrorDialogs::ToolTip4Object(m_itemListOfLocales, _("Invalid value"), _("Error"));
+        return false;
+    }
 
     Option::instance().CurrencyHistoryEnabled(m_currency_history->GetValue());
 
@@ -267,20 +295,28 @@ bool OptionSettingsGeneral::SaveSettings()
 
 bool OptionSettingsGeneral::doFormatDoubleValue(const wxString& locale, wxString& result)
 {
-    wxTRANSLATE("bad locale name");
-    double value = 1234567.89;
-    int precision = 2;
-    wxString s;
     if (locale.empty()) {
         result = "";
         return true;
     }
 
+    result = wxTRANSLATE("bad locale name");
+    double value = 1234567.8910;
+
     try {
-        s = _("Currency value sample: %s");
+        auto test = fmt::format(std::locale(locale.c_str()), "{:L}", value);
+
+        wxString cents;
+        wxRegEx pattern(R"([^0-9][0-9]{2})");
+        if (pattern.Matches(test)) {
+            cents = pattern.GetMatch(test, 0);
+        }
+        else
+            return false;
+
         const wxString sample = fmt::format(std::locale(locale.c_str()), "{:L}", static_cast<int>(value))
-            + wxString(fmt::format("{:.{}f}", fabs(value - static_cast<int>(value)), precision)).Mid(1);
-        result = wxString::Format(s, sample);
+            + cents;
+        result = wxString::Format(_("Currency value sample: %s"), sample);
     }
     catch (std::exception & ex) {
         result = wxString(ex.what());
@@ -288,4 +324,37 @@ bool OptionSettingsGeneral::doFormatDoubleValue(const wxString& locale, wxString
     }
 
     return true;
+}
+void OptionSettingsGeneral::OnChangeGUILanguage(wxCommandEvent& event)
+{
+    wxLanguage lang = static_cast<wxLanguage>(event.GetId() - wxID_LAST - 1);
+    if (lang != m_app->getGUILanguage() && m_app->setGUILanguage(lang))
+        mmErrorDialogs::MessageWarning(this
+            , _("The language for this application has been changed. "
+                "The change will take effect the next time the application is started.")
+            , _("Language change"));
+}
+
+void OptionSettingsGeneral::OnMouseLeftDown(wxCommandEvent& event)
+{
+    wxMenu menuLang;
+    wxArrayString lang_files = wxTranslations::Get()->GetAvailableTranslations("mmex");
+    std::map<wxString, std::pair<int, wxString>> langs;
+    menuLang.AppendRadioItem(wxID_LAST + 1 + wxLANGUAGE_DEFAULT, _("system default"))
+        ->Check(m_app->getGUILanguage() == wxLANGUAGE_DEFAULT);
+    for (auto & file : lang_files)
+    {
+        const wxLanguageInfo* info = wxLocale::FindLanguageInfo(file);
+        if (info)
+            langs[info->Description] = std::make_pair(info->Language, info->CanonicalName);
+    }
+    langs[wxLocale::GetLanguageName(wxLANGUAGE_ENGLISH_US)] = std::make_pair(wxLANGUAGE_ENGLISH_US, "en_US");
+    for (auto const& lang : langs)
+    {
+        menuLang.AppendRadioItem(wxID_LAST + 1 + lang.second.first, lang.first, lang.second.second)
+            ->Check(lang.second.first == m_app->getGUILanguage());
+    }
+    PopupMenu(&menuLang);
+
+    event.Skip();
 }
