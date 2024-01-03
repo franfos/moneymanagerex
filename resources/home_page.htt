@@ -51,7 +51,7 @@
         <tr valign="top">
             <td width="50%">
                 <div class='shadow'>
-                
+
                 <!--Accounts-->
 
                 <TMPL_VAR ACCOUNTS_INFO>
@@ -61,13 +61,26 @@
                 <TMPL_VAR TERM_ACCOUNTS_INFO>
                 <TMPL_VAR SHARE_ACCOUNTS_INFO>
                 </div>
-                
+
                 <!--Stocks-->
                 <TMPL_VAR STOCKS_INFO>
                 <!--Assets-->
                 <TMPL_VAR ASSETS_INFO>
-                <!--Currency-->
-                <TMPL_VAR CURRENCY_RATES>
+                  <!--Top Withdrawals: Last 30 Days-->
+                <TMPL_VAR TOP_CATEGORIES>
+                <!--Transaction Statistics -->
+                <div class = "shadow">
+                <table class='table'>
+                <thead>
+                    <tr class='active'>
+                        <th id='stat_name'></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id='stats'>
+                </tbody>
+                </table>
+                </div>
             </td>
             <td>
                 <!--Income vs Expenses -->
@@ -154,22 +167,6 @@
                     chart.render();
                 </script>
                 <TMPL_VAR BILLS_AND_DEPOSITS>
-                <!--Top Withdrawals: Last 30 Days-->
-                <TMPL_VAR TOP_CATEGORIES>
-                <!--Transaction Statistics -->
-                <div class = "shadow">
-                <table class='table'>
-                <thead>
-                    <tr class='active'>
-                        <th id='stat_name'></th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id='stats'>
-                </tbody>
-                </table>
-                </div>
-                <!--Transaction Statistics end-->
             </td>
         </tr>
     </table>
