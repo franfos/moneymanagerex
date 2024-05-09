@@ -557,7 +557,7 @@ void mmTransDialog::CreateControls()
     bFrequentUsedNotes->Connect(ID_DIALOG_TRANS_BUTTON_FREQENTNOTES
         , wxEVT_COMMAND_BUTTON_CLICKED
         , wxCommandEventHandler(mmTransDialog::OnFrequentUsedNotes), nullptr, this);
-    
+
     // Colours
     bColours_ = new mmColorButton(this, wxID_LOWEST, bAuto->GetSize());
     mmToolTip(bColours_, _("User Colors"));
@@ -836,12 +836,28 @@ void mmTransDialog::OnFocusChange(wxChildFocusEvent& event)
         }
         break;
     case mmID_PAYEE:
-        cbPayee_->ChangeValue(cbPayee_->GetValue());
+        if (cbPayee_->GetCount() >= 1)
+        {
+          if (cbPayee_->GetCurrentSelection() == wxNOT_FOUND)
+          {
+            cbPayee_->ChangeValue(cbPayee_->GetString(0));
+          }
+          else
+          {
+            cbPayee_->ChangeValue(cbPayee_->GetString(cbPayee_->GetCurrentSelection()));
+          }
+          cbPayee_->Dismiss();
+        }
+        else
+        {
+          cbPayee_->ChangeValue(cbPayee_->GetValue());
+        }
         m_trx_data.PAYEEID = cbPayee_->mmGetId();
         SetCategoryForPayee();
         break;
     case mmID_CATEGORY:
         cbCategory_->ChangeValue(cbCategory_->GetValue());
+        cbCategory_->Dismiss();
         break;
     case mmID_TEXTAMOUNT:
         if (m_textAmount->Calculate()) {
