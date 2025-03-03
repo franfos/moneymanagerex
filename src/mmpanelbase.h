@@ -52,6 +52,7 @@ public:
     std::vector<PANEL_COLUMN> m_columns;
     std::vector<int> m_real_columns; // map from actual column to EColumn when list can have optional columns
     wxString m_col_width;
+    wxString m_col_idstr;
     int m_default_sort_column = -1;
 
     virtual wxListItemAttr* OnGetItemAttr(long row) const;
@@ -59,7 +60,11 @@ public:
     int GetColumnWidthSetting(int column_number, int default_size = wxLIST_AUTOSIZE);
     void SetColumnWidthSetting(int column_number, int column_width);
 
+    void SetColumnOrder(std::vector<int> columnList);
+    std::vector<int> GetColumnOrder();
+
 protected:
+    void CreateColumns();
     void OnItemResize(wxListEvent& event);
     virtual void OnColClick(wxListEvent& event);
     void OnColRightClick(wxListEvent& event);
@@ -69,6 +74,7 @@ protected:
     void OnHeaderHide(wxCommandEvent& WXUNUSED(event));
     void OnHeaderSort(wxCommandEvent& event);
     void OnHeaderReset(wxCommandEvent& WXUNUSED(event));
+    void OnHeaderMove(wxCommandEvent& WXUNUSED(event), int direction);
     int GetRealColumn(int col);
     int m_ColumnHeaderNbr = -1;
     enum {
@@ -78,6 +84,8 @@ protected:
         MENU_HEADER_HIDE = wxID_HIGHEST + 2000,
         MENU_HEADER_SORT,
         MENU_HEADER_RESET,
+        MENU_HEADER_MOVE_LEFT,
+        MENU_HEADER_MOVE_RIGHT,
         MENU_HEADER_COLUMN, // Must be last in list
     };
 };

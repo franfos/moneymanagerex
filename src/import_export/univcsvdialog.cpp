@@ -95,7 +95,7 @@ mmUnivCSVDialog::mmUnivCSVDialog(
     m_account_id(account_id),
     m_file_path(file_path),
     decimal_(Model_Currency::GetBaseCurrency()->DECIMAL_POINT),
-    depositType_(Model_Checking::all_type()[Model_Checking::DEPOSIT])
+    depositType_(Model_Checking::TYPE_STR_DEPOSIT)
 {
     CSVFieldName_[UNIV_CSV_ID] = wxTRANSLATE("ID");
     CSVFieldName_[UNIV_CSV_DATE] = wxTRANSLATE("Date");
@@ -198,7 +198,7 @@ void mmUnivCSVDialog::CreateControls()
     m_text_ctrl_->Connect(ID_FILE_NAME
         , wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler(mmUnivCSVDialog::OnFileNameEntered), nullptr, this);
 
-    const wxString& file_button_label = IsImporter() ? _("&Browse") : _("File");
+    const wxString file_button_label = _("&Browse...");
     wxButton* button_browse = new wxButton(itemPanel6, wxID_BROWSE, file_button_label);
     itemBoxSizer7->Add(button_browse, g_flagsH);
 
@@ -387,7 +387,7 @@ void mmUnivCSVDialog::CreateControls()
     flex_sizer->Add(itemStaticText88, g_flagsH);
 
     m_choiceEncoding = new wxChoice(itemPanel7, ID_ENCODING);
-    for (const auto i : g_encoding)
+    for (const auto &i : g_encoding)
         m_choiceEncoding->Append(wxGetTranslation(i.second.second), new wxStringClientData(i.second.second));
     m_choiceEncoding->SetSelection(0);
 
@@ -557,7 +557,7 @@ void mmUnivCSVDialog::CreateControls()
     itemClearButton->Connect(wxID_CLEAR, wxEVT_COMMAND_BUTTON_CLICKED
         , wxCommandEventHandler(mmUnivCSVDialog::OnButtonClear), nullptr, this);
 
-    const wxString& file_tooltip = IsImporter()
+    const wxString file_tooltip = IsImporter()
         ? (IsXML() ? _("Choose XML data file to Import") : _("Choose CSV data file to Import"))
         : (IsXML() ? _("Choose XML data file to Export") : _("Choose CSV data file to Export"));
     mmToolTip(button_browse, file_tooltip);
@@ -613,7 +613,7 @@ void mmUnivCSVDialog::initDelimiter()
 
 }
 
-void mmUnivCSVDialog::OnShowPayeeDialog(wxMouseEvent& event)
+void mmUnivCSVDialog::OnShowPayeeDialog(wxMouseEvent&)
 {
     wxString payeeName;
     if (payeeListBox_->GetSelectedRow() >= 0) {
@@ -632,7 +632,7 @@ void mmUnivCSVDialog::OnShowPayeeDialog(wxMouseEvent& event)
     } 
 }
 
-void mmUnivCSVDialog::OnShowCategDialog(wxMouseEvent& event)
+void mmUnivCSVDialog::OnShowCategDialog(wxMouseEvent&)
 {
     int id = -1;
     if (categoryListBox_->GetSelectedRow() >= 0)
@@ -660,12 +660,12 @@ void mmUnivCSVDialog::OnShowCategDialog(wxMouseEvent& event)
 
 void mmUnivCSVDialog::OnColumnResize(wxListEvent& event)
 {
-    int col = event.GetColumn();
+    const unsigned int col = event.GetColumn();
     if (col == 0 || col > csvFieldOrder_.size()) return;
     csvFieldOrder_.at(col - 1).second = m_list_ctrl_->GetColumnWidth(col);
 }
 
-void mmUnivCSVDialog::OnSettingsSelected(wxCommandEvent& event)
+void mmUnivCSVDialog::OnSettingsSelected(wxCommandEvent&)
 {
     SetSettings(GetStoredSettings(m_choice_preset_name->GetSelection()));
 }
@@ -822,7 +822,7 @@ void mmUnivCSVDialog::SetSettings(const wxString &json_data)
         Value a = json_doc["FIELD_WIDTHS"].GetArray();
         if (a.IsArray())
         {
-            int col = 0;
+            unsigned int col = 0;
             for (auto& v : a.GetArray())
             {
                 const auto value = v.GetInt();
@@ -1342,7 +1342,7 @@ void mmUnivCSVDialog::OnImport(wxCommandEvent& WXUNUSED(event))
     const long linesToImport = lastRow - firstRow;
     long countEmptyLines = 0;
     int color_id = colorCheckBox_->IsChecked() ? colorButton_->GetColorId() : -1;
-    if (colorCheckBox_->IsChecked() && color_id < 0 || color_id > 7) {
+    if (colorCheckBox_->IsChecked() && (color_id < 0 || color_id > 7) ) {
         return mmErrorDialogs::ToolTip4Object(colorButton_, _("Color"), _("Invalid value"), wxICON_ERROR);
     }
 
@@ -1609,7 +1609,7 @@ void mmUnivCSVDialog::OnExport(wxCommandEvent& WXUNUSED(event))
 
     for (const auto& pBankTransaction : txns)
     {
-        if (Model_Checking::status(pBankTransaction) == Model_Checking::VOID_ || !pBankTransaction.DELETEDTIME.IsEmpty())
+        if (Model_Checking::status_id(pBankTransaction) == Model_Checking::STATUS_ID_VOID || !pBankTransaction.DELETEDTIME.IsEmpty())
             continue;
 
         Model_Checking::Full_Data tran(pBankTransaction, split, tags);
@@ -1633,7 +1633,7 @@ void mmUnivCSVDialog::OnExport(wxCommandEvent& WXUNUSED(event))
             Model_Category::Data* category = Model_Category::instance().get(splt.CATEGID);
 
             double amt = splt.SPLITTRANSAMOUNT;
-            if (Model_Checking::type(pBankTransaction) == Model_Checking::WITHDRAWAL
+            if (Model_Checking::type_id(pBankTransaction) == Model_Checking::TYPE_ID_WITHDRAWAL
                 && has_split) {
                 amt = -amt;
             }
@@ -1705,7 +1705,7 @@ void mmUnivCSVDialog::OnExport(wxCommandEvent& WXUNUSED(event))
                     itemType = ITransactionsFile::TYPE_NUMBER;
                     break;
                 case UNIV_CSV_TYPE:
-                    entry = Model_Checking::all_type()[Model_Checking::type(pBankTransaction)];
+                    entry = Model_Checking::TYPE_STR[Model_Checking::type_id(pBankTransaction)];
                     break;
                 case UNIV_CSV_ID:
                     entry = wxString::Format("%i", tran.TRANSID);
@@ -1718,7 +1718,7 @@ void mmUnivCSVDialog::OnExport(wxCommandEvent& WXUNUSED(event))
                         if (data)
                         {
                             // format date fields
-                            if (Model_CustomField::type(Model_CustomField::instance().get(data->FIELDID)) == Model_CustomField::DATE)
+                            if (Model_CustomField::type_id(Model_CustomField::instance().get(data->FIELDID)) == Model_CustomField::TYPE_ID_DATE)
                                 entry = mmGetDateForDisplay(data->CONTENT, date_format_);
                             else
                                 entry = data->CONTENT;
@@ -1916,7 +1916,7 @@ void mmUnivCSVDialog::update_preview()
             std::stable_sort(txns.begin(), txns.end(), SorterByTRANSDATE());
             for (const auto& pBankTransaction : txns)
             {
-                if (Model_Checking::status(pBankTransaction) == Model_Checking::VOID_ || !pBankTransaction.DELETEDTIME.IsEmpty())
+                if (Model_Checking::status_id(pBankTransaction) == Model_Checking::STATUS_ID_VOID || !pBankTransaction.DELETEDTIME.IsEmpty())
                     continue;
 
                 Model_Checking::Full_Data tran(pBankTransaction, split, tags);
@@ -1948,7 +1948,7 @@ void mmUnivCSVDialog::update_preview()
                     Model_Currency::Data* currency = Model_Account::currency(from_account);
 
                     double amt = splt.SPLITTRANSAMOUNT;
-                    if (Model_Checking::type(pBankTransaction) == Model_Checking::WITHDRAWAL
+                    if (Model_Checking::type_id(pBankTransaction) == Model_Checking::TYPE_ID_WITHDRAWAL
                         && has_split) {
                         amt = -amt;
                     }
@@ -2030,7 +2030,7 @@ void mmUnivCSVDialog::update_preview()
                                 if (data)
                                 {
                                     // Format date fields
-                                    if (Model_CustomField::type(Model_CustomField::instance().get(data->FIELDID)) == Model_CustomField::DATE)
+                                    if (Model_CustomField::type_id(Model_CustomField::instance().get(data->FIELDID)) == Model_CustomField::TYPE_ID_DATE)
                                         text << inQuotes(mmGetDateForDisplay(data->CONTENT, date_format_), delimit);
                                     else
                                         text << inQuotes(data->CONTENT, delimit);
@@ -2280,7 +2280,7 @@ void mmUnivCSVDialog::OnListBox(wxCommandEvent& event)
         OnRemove(event);
 }
 
-void mmUnivCSVDialog::OnDelimiterChange(wxCommandEvent& event)
+void mmUnivCSVDialog::OnDelimiterChange(wxCommandEvent&)
 {
     wxString delimit = m_textDelimiter->GetValue();
 
@@ -2438,7 +2438,7 @@ void mmUnivCSVDialog::parseToken(int index, const wxString& orig_token, tran_hol
 
         if (find_if(csvFieldOrder_.begin(), csvFieldOrder_.end(), [](const std::pair<int, int>& element) {return element.first == UNIV_CSV_TYPE; }) == csvFieldOrder_.end()) {
             if ((amount > 0.0 && !m_reverce_sign) || (amount <= 0.0 && m_reverce_sign)) {
-                holder.Type = Model_Checking::all_type()[Model_Checking::DEPOSIT];
+                holder.Type = Model_Checking::TYPE_STR_DEPOSIT;
             }
         }
 
@@ -2551,7 +2551,7 @@ void mmUnivCSVDialog::parseToken(int index, const wxString& orig_token, tran_hol
             break;
 
         holder.Amount = fabs(amount);
-        holder.Type = Model_Checking::all_type()[Model_Checking::WITHDRAWAL];
+        holder.Type = Model_Checking::TYPE_STR_WITHDRAWAL;
         break;
 
     case UNIV_CSV_DEPOSIT:
@@ -2569,7 +2569,7 @@ void mmUnivCSVDialog::parseToken(int index, const wxString& orig_token, tran_hol
             break;
 
         holder.Amount = fabs(amount);
-        holder.Type = Model_Checking::all_type()[Model_Checking::DEPOSIT];
+        holder.Type = Model_Checking::TYPE_STR_DEPOSIT;
         break;
 
         // A number of type options are supported to make amount positive 
@@ -2579,15 +2579,15 @@ void mmUnivCSVDialog::parseToken(int index, const wxString& orig_token, tran_hol
         {
             if (depositType_.CmpNoCase(token) == 0)
             {
-                holder.Type = Model_Checking::all_type()[Model_Checking::DEPOSIT];
+                holder.Type = Model_Checking::TYPE_STR_DEPOSIT;
                 break;
             }
         }
         else
         {
-            for (const wxString& entry : { "debit", "deposit", "+" }) {
+            for (const wxString entry : { "debit", "deposit", "+" }) {
                 if (entry.CmpNoCase(token) == 0) {
-                    holder.Type = Model_Checking::all_type()[Model_Checking::DEPOSIT];
+                    holder.Type = Model_Checking::TYPE_STR_DEPOSIT;
                     break;
                 }
             }
@@ -2770,7 +2770,7 @@ void mmUnivCSVDialog::OnCheckboxClick(wxCommandEvent& event)
     }
 }
 
-void mmUnivCSVDialog::OnMenuSelected(wxCommandEvent& event)
+void mmUnivCSVDialog::OnMenuSelected(wxCommandEvent&)
 {
     colorButton_->Enable(false);
     colorCheckBox_->SetValue(false);
@@ -2799,11 +2799,11 @@ bool mmUnivCSVDialog::validateCustomFieldData(int fieldId, wxString& value, wxSt
     if (!value.IsEmpty())
     {
         const Model_CustomField::Data* data = Model_CustomField::instance().get(fieldId);
-        wxString type_string = Model_CustomField::fieldtype_desc(Model_CustomField::type(data));
-        switch (Model_CustomField::type(data))
+        wxString type_string = Model_CustomField::TYPE_STR[Model_CustomField::type_id(data)];
+        switch (Model_CustomField::type_id(data))
         {
             // Check if string can be read as an integer. Will fail if passed a double.
-        case Model_CustomField::INTEGER:
+        case Model_CustomField::TYPE_ID_INTEGER:
             value = cleanseNumberString(value, true);
             if (!value.ToCLong(&int_val))
             {
@@ -2814,7 +2814,7 @@ bool mmUnivCSVDialog::validateCustomFieldData(int fieldId, wxString& value, wxSt
             break;
 
             // Check if string can be read as a double
-        case Model_CustomField::DECIMAL:
+        case Model_CustomField::TYPE_ID_DECIMAL:
             value = cleanseNumberString(value, true);
             if (!value.ToCDouble(&double_val))
             {
@@ -2830,7 +2830,7 @@ bool mmUnivCSVDialog::validateCustomFieldData(int fieldId, wxString& value, wxSt
             break;
 
             // Check if string can be interpreted as "True" or "False" (case insensitive)    
-        case Model_CustomField::BOOLEAN:
+        case Model_CustomField::TYPE_ID_BOOLEAN:
             if (bool_true_array.Index(value, false) == wxNOT_FOUND)
                 if (bool_false_array.Index(value, false) == wxNOT_FOUND)
                 {
@@ -2842,7 +2842,7 @@ bool mmUnivCSVDialog::validateCustomFieldData(int fieldId, wxString& value, wxSt
             break;
 
             // Check if string is a valid choice (case insensitive)
-        case Model_CustomField::SINGLECHOICE:
+        case Model_CustomField::TYPE_ID_SINGLECHOICE:
             choices = Model_CustomField::getChoices(data->PROPERTIES);
             index = choices.Index(value, false);
             if (index == wxNOT_FOUND)
@@ -2854,7 +2854,7 @@ bool mmUnivCSVDialog::validateCustomFieldData(int fieldId, wxString& value, wxSt
             break;
 
             // Check if all of the ';' delimited strings are valid choices (case insensitive)
-        case Model_CustomField::MULTICHOICE:
+        case Model_CustomField::TYPE_ID_MULTICHOICE:
             choices = Model_CustomField::getChoices(data->PROPERTIES);
             tokenizer = wxStringTokenizer(value, ";");
             value.Clear();
@@ -2875,7 +2875,7 @@ bool mmUnivCSVDialog::validateCustomFieldData(int fieldId, wxString& value, wxSt
             break;
 
             // Parse the date using the user specified format. Convert to ISO date
-        case Model_CustomField::DATE:
+        case Model_CustomField::TYPE_ID_DATE:
             if (!mmParseDisplayStringToDate(date, value, date_format_))
             {
                 message << " " << wxString::Format(_("Value %1$s for custom field '%2$s' is not type %3$s."), value, data->DESCRIPTION, type_string) <<
@@ -2886,7 +2886,7 @@ bool mmUnivCSVDialog::validateCustomFieldData(int fieldId, wxString& value, wxSt
             break;
 
             // Parse the time. Convert to ISO Format
-        case Model_CustomField::TIME:
+        case Model_CustomField::TYPE_ID_TIME:
             if (!time.ParseTime(value))
             {
                 message << " " << wxString::Format(_("Value %1$s for custom field '%2$s' is not type %3$s."), value, data->DESCRIPTION, type_string);

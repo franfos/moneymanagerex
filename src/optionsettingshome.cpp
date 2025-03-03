@@ -44,7 +44,7 @@ OptionSettingsHome::OptionSettingsHome()
     m_all_date_ranges.push_back(wxSharedPtr<mmDateRange>(new mmLastNDays(Model_Infotable::instance().GetIntInfo("HOMEPAGE_INCEXP_DAYS", 14))));
 
     int sel_id = Option::instance().getHomePageIncExpRange();
-    if (sel_id >= m_all_date_ranges.size())
+    if (sel_id >= static_cast<int>(m_all_date_ranges.size()))
         sel_id = 0;
     m_inc_vs_exp_date_range = m_all_date_ranges[sel_id];
 
@@ -75,7 +75,7 @@ void OptionSettingsHome::Create()
     homePanelSizer0->Add(home_panel, wxSizerFlags(g_flagsExpand).Proportion(0));
 
     // Income vs Expense
-    wxStaticBox* totalsStaticBox = new wxStaticBox(home_panel, wxID_STATIC, _("Income vs Expenses"));
+    wxStaticBox* totalsStaticBox = new wxStaticBox(home_panel, wxID_STATIC, _("Income vs. Expenses"));
     SetBoldFont(totalsStaticBox);
     wxStaticBoxSizer* totalsStaticBoxSizer = new wxStaticBoxSizer(totalsStaticBox, wxHORIZONTAL);
     homePanelSizer->Add(totalsStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));

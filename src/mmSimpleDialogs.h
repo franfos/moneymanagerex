@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #define MM_EX_MMSIMPLEDIALOGS_H_
 
 #include "mmex.h"
+#include "mmTextCtrl.h"
 #include "util.h"
 
 #include "model/Model_Account.h"
@@ -29,6 +30,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <wx/choicdlg.h>
 #include <wx/spinbutt.h>
 #include <wx/dialog.h>
+#include <wx/display.h>
 #include <wx/choice.h>
 #include <wx/stc/stc.h>
 #include <wx/timectrl.h>
@@ -37,6 +39,93 @@ class wxComboBox;
 class wxTextCtrl;
 class wxChoice;
 class wxButton;
+
+class mmCalculatorPopup : public wxPopupTransientWindow
+{
+public:
+    mmCalculatorPopup(wxWindow* parent, mmTextCtrl* target = nullptr);
+    virtual ~mmCalculatorPopup();
+
+    void SetValue(wxString& value); 
+    void SetFocus();
+    void SetTarget(mmTextCtrl* target);
+
+    virtual void Popup(wxWindow* focus = NULL) override
+    {
+        if (dismissedByButton_ == false)
+        {
+            wxPoint pt = GetParent()->GetScreenPosition();
+            wxRect displayRect = wxDisplay(wxDisplay::GetFromPoint(pt)).GetGeometry();
+
+            int x = std::min(pt.x, displayRect.GetRight() - GetSize().GetWidth());
+            int y = std::min(pt.y + GetParent()->GetSize().GetHeight(), displayRect.GetBottom() - GetSize().GetHeight());
+            SetPosition(wxPoint(x, y));
+            valueTextCtrl_->SetValue(target_->GetValue());
+            target_->Enable(false);
+            wxPopupTransientWindow::Popup(focus);
+        }
+        else dismissedByButton_ = false;
+    }
+
+protected:
+    virtual void OnDismiss() override
+    {
+#ifdef __WXMSW__
+        // On MSW check if the button was used to dismiss to prevent the popup from reopening
+        wxPoint mousePos = wxGetMousePosition();
+        if (GetParent()->GetClientRect().Contains(GetParent()->ScreenToClient(mousePos)))
+        {
+            dismissedByButton_ = true;
+        }
+        else
+            dismissedByButton_ = false;
+#endif
+        if (target_)
+        {
+            valueTextCtrl_->Calculate();
+            target_->ChangeValue(valueTextCtrl_->GetValue());
+            target_->Enable(true);
+            target_->SetFocus();
+        }
+    }
+
+private:
+    bool dismissedByButton_ = false;
+    mmTextCtrl* target_;
+    mmTextCtrl* valueTextCtrl_ = nullptr;
+    wxButton* button_lparen_ = nullptr;
+    wxButton* button_rparen_ = nullptr;
+    wxButton* button_clear_ = nullptr;
+    wxButton* button_del_ = nullptr;
+    wxButton* button_7_ = nullptr;
+    wxButton* button_8_ = nullptr;
+    wxButton* button_9_ = nullptr;
+    wxButton* button_div_ = nullptr;
+    wxButton* button_4_ = nullptr;
+    wxButton* button_5_ = nullptr;
+    wxButton* button_6_ = nullptr;
+    wxButton* button_mult_ = nullptr;
+    wxButton* button_1_ = nullptr;
+    wxButton* button_2_ = nullptr;
+    wxButton* button_3_ = nullptr;
+    wxButton* button_minus_ = nullptr;
+    wxButton* button_dec_ = nullptr;
+    wxButton* button_0_ = nullptr;
+    wxButton* button_equal_ = nullptr;
+    wxButton* button_plus_ = nullptr;
+    ;
+    void OnButtonPressed(wxCommandEvent& event);
+    enum Buttons
+    {
+        mmID_MULTIPLY = wxID_HIGHEST,
+        mmID_DIVIDE,
+        mmID_DELETE
+    };
+};
+
+inline void mmCalculatorPopup::SetFocus() { valueTextCtrl_->SetFocus(); }
+inline void mmCalculatorPopup::SetTarget(mmTextCtrl* target) { target_ = target; button_dec_->SetLabel(target->GetDecimalPoint()); }
+
 
 class mmComboBox : public wxComboBox
 {
@@ -53,7 +142,7 @@ public:
 protected:
     void OnTextUpdated(wxCommandEvent& event);
     void OnSetFocus(wxFocusEvent& event);
-    void OnDropDown(wxCommandEvent& event);
+    void OnDropDown(wxCommandEvent&);
     void OnKeyPressed(wxKeyEvent& event);
     virtual void init() = 0;
     std::map<wxString, int> all_elements_;
@@ -74,8 +163,8 @@ public:
 protected:
     void init();
 private:
-    int accountID_;
-    bool excludeClosed_;
+    int accountID_ = -1;
+    bool excludeClosed_ = true;
 };
 
 /* -------------------------------------------- */
@@ -178,7 +267,7 @@ private:
     wxDatePickerCtrl* datePicker_ = nullptr;
     wxTimePickerCtrl* timePicker_ = nullptr;
     void OnDateChanged(wxDateEvent& event);
-    void OnDateSpin(wxSpinEvent& event);
+    void OnDateSpin(wxSpinEvent&);
 
     wxWindow* parent_ = nullptr;
     wxStaticText* itemStaticTextWeek_ = nullptr;
@@ -350,8 +439,8 @@ protected:
     void OnPaste(wxStyledTextEvent& event);
     void OnKillFocus(wxFocusEvent& event);
     void OnPaint(wxPaintEvent& event);
-    void OnPaintButton(wxPaintEvent& event);
-    void OnDropDown(wxCommandEvent& event);
+    void OnPaintButton(wxPaintEvent&);
+    void OnDropDown(wxCommandEvent&);
     void OnKeyPressed(wxKeyEvent& event);
     void OnPopupCheckboxSelected(wxCommandEvent& event);
     void OnMouseCaptureChange(wxMouseEvent& event);

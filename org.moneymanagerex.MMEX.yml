@@ -1,6 +1,6 @@
 app-id: org.moneymanagerex.MMEX
 runtime: org.gnome.Platform
-runtime-version: '45'
+runtime-version: '47'
 sdk: org.gnome.Sdk
 command: mmex
 cleanup:
@@ -35,8 +35,8 @@ modules:
       - --enable-intl
     sources:
       - type: archive
-        url: https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.4/wxWidgets-3.2.4.tar.bz2
-        sha256: 0640e1ab716db5af2ecb7389dbef6138d7679261fbff730d23845ba838ca133e
+        url: https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2
+        sha256: 939e5b77ddc5b6092d1d7d29491fe67010a2433cf9b9c0d841ee4d04acb9dce7
         x-checker-data:
           type: json
           url: https://api.github.com/repos/wxWidgets/wxWidgets/releases/latest

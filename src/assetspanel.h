@@ -93,6 +93,19 @@ public:
         ICON_DOWNARROW
     };
 
+    enum EColumn
+    {
+        COL_ICON = 0,
+        COL_ID,
+        COL_NAME,
+        COL_DATE,
+        COL_TYPE,
+        COL_VALUE_INITIAL,
+        COL_VALUE_CURRENT,
+        COL_NOTES,
+        COL_MAX, // number of columns
+    };
+
     mmAssetsPanel(mmGUIFrame* frame, wxWindow *parent, wxWindowID winid, const wxString& name="mmAssetsPanel");
     mmGUIFrame* m_frame = nullptr;
 
@@ -101,7 +114,7 @@ public:
     wxString getItem(long item, long column);
 
     Model_Asset::Data_Set m_assets;
-    Model_Asset::TYPE m_filter_type;
+    Model_Asset::TYPE_ID m_filter_type;
     int col_max() { return COL_MAX; }
     int col_sort() { return COL_DATE; }
 
@@ -146,18 +159,6 @@ private:
     enum {
         IDC_PANEL_ASSET_STATIC_DETAILS = wxID_HIGHEST + 1220,
         IDC_PANEL_ASSET_STATIC_DETAILS_MINI,
-    };
-    enum EColumn
-    {
-        COL_ICON = 0,
-        COL_ID,
-        COL_NAME,
-        COL_DATE,
-        COL_TYPE,
-        COL_VALUE_INITIAL,
-        COL_VALUE_CURRENT,
-        COL_NOTES,
-        COL_MAX, // number of columns
     };
 };
 

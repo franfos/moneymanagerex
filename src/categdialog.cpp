@@ -255,19 +255,19 @@ void mmCategDialog::CreateControls()
         , wxID_REPLACE_ALL, mmBitmapBundle(png::RELOCATION, mmBitmapButtonSize));
     m_buttonRelocate->Connect(wxID_REPLACE_ALL, wxEVT_COMMAND_BUTTON_CLICKED
         , wxCommandEventHandler(mmCategDialog::OnCategoryRelocation), nullptr, this);
-    mmToolTip(m_buttonRelocate, _("Reassign all categories to another category"));
+    mmToolTip(m_buttonRelocate, _("Merge Categories"));
 
-    m_tbCollapse = new wxToggleButton(this, ID_COLLAPSE, _("Collapse All"), wxDefaultPosition
+    m_tbCollapse = new wxToggleButton(this, ID_COLLAPSE, _("C&ollapse All"), wxDefaultPosition
         , wxDefaultSize);
     m_tbCollapse->Connect(wxID_ANY, wxEVT_TOGGLEBUTTON,
         wxCommandEventHandler(mmCategDialog::OnExpandOrCollapseToggle), nullptr, this);
 
-    m_tbExpand = new wxToggleButton(this, ID_EXPAND, _("Expand All"), wxDefaultPosition
+    m_tbExpand = new wxToggleButton(this, ID_EXPAND, _("E&xpand All"), wxDefaultPosition
         , wxDefaultSize);
     m_tbExpand->Connect(wxID_ANY, wxEVT_TOGGLEBUTTON,
         wxCommandEventHandler(mmCategDialog::OnExpandOrCollapseToggle), nullptr, this);
 
-    m_tbShowAll = new wxToggleButton(this, wxID_SELECTALL, _("Show &All"), wxDefaultPosition
+    m_tbShowAll = new wxToggleButton(this, wxID_SELECTALL, _("&Show All"), wxDefaultPosition
         , wxDefaultSize);
     mmToolTip(m_tbShowAll, _("Show all hidden categories"));
     m_tbShowAll->Connect(wxID_SELECTALL, wxEVT_TOGGLEBUTTON
@@ -763,9 +763,9 @@ void mmCategDialog::OnMenuSelected(wxCommandEvent& event)
                 , wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
         if (msgDlg.ShowModal() == wxID_YES)
         {
-            const auto categList = Model_Category::instance().all();
+            auto categList = Model_Category::instance().all();
             Model_Category::instance().Savepoint();
-            for (auto catItem : categList)
+            for (auto &catItem : categList)
             {
                 catItem.ACTIVE = 1;
                 Model_Category::instance().save(&catItem);              

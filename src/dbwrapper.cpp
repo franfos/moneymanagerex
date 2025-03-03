@@ -36,19 +36,24 @@ wxSharedPtr<wxSQLite3Database> static_db_ptr()
     return db;
 }
 
-wxSharedPtr<wxSQLite3Database> mmDBWrapper::Open(const wxString &dbpath, const wxString &password, bool debug)
+wxSharedPtr<wxSQLite3Database> mmDBWrapper::Open(const wxString &dbpath, const wxString &password, const bool debug)
 {
     wxSharedPtr<wxSQLite3Database> db = static_db_ptr();
 
     int err = SQLITE_OK;
     wxString errStr=wxEmptyString;
+    wxSQLite3CipherSQLCipher cipher;
+    cipher.InitializeVersionDefault(4);
+    cipher.SetLegacy(true);
     try
     {
-        if (debug)
-            // open and disable flag SQLITE_CorruptRdOnly = 0x200000000
-            db->Open(dbpath, password, (WXSQLITE_OPEN_READWRITE | WXSQLITE_OPEN_CREATE) & ~0x200000000);
-        else
-            db->Open(dbpath, password);
+        // open and disable flag SQLITE_CorruptRdOnly = 0x200000000
+        const int flags = debug ?
+                    (WXSQLITE_OPEN_READWRITE | WXSQLITE_OPEN_CREATE) & ~0x200000000 :
+                     WXSQLITE_OPEN_READWRITE | WXSQLITE_OPEN_CREATE;
+
+        db->Open(dbpath, cipher, password, flags);
+
         // Ensure that an existing mmex database is not encrypted.
         if ((db->IsOpen()) && (db->TableExists("INFOTABLE_V1")))
         {

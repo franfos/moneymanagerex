@@ -39,7 +39,7 @@ public:
 private:
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Merge tags")
+        , const wxString& caption = _("Merge Tags")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX
@@ -49,11 +49,11 @@ private:
     void IsOkOk();
     void OnOk(wxCommandEvent& event);
     void OnCancel(wxCommandEvent& event);
-    void OnTextUpdated(wxCommandEvent& event);
+    void OnTextUpdated(wxCommandEvent&);
 
     void OnFocusChange(wxChildFocusEvent& event);
 
-    int sourceTagID_;
+    int sourceTagID_ = -1;
     int destTagID_ = -1;
     wxArrayString choices_;
 

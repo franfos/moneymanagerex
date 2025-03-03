@@ -34,10 +34,10 @@
 #include "optionsettingsmisc.h"
 
 static const char * const s_pagetitle[] = {
-    wxTRANSLATE("General"), wxTRANSLATE("View Options"), wxTRANSLATE("Dashboard"), wxTRANSLATE("Attachments"), wxTRANSLATE("Network"), wxTRANSLATE("Others")
+    wxTRANSLATE("General"), wxTRANSLATE("View"), wxTRANSLATE("Dashboard"), wxTRANSLATE("Attachments"), wxTRANSLATE("Network"), wxTRANSLATE("Other")
 };
 
-wxIMPLEMENT_DYNAMIC_CLASS(mmOptionsDialog, wxDialog);
+wxIMPLEMENT_DYNAMIC_CLASS(mmOptionsDialog, wxDialog)
 
 wxBEGIN_EVENT_TABLE( mmOptionsDialog, wxDialog )
 EVT_BUTTON(wxID_OK, mmOptionsDialog::OnOk)
@@ -139,7 +139,7 @@ void mmOptionsDialog::CreateControls()
     /**********************************************************************************************
     Add the panels to the notebook
     **********************************************************************************************/
-    for (int i = 0; i < m_panel_list.size(); i++) {
+    for (unsigned int i = 0; i < m_panel_list.size(); i++) {
         m_listbook->InsertPage(i, m_panel_list.at(i), wxGetTranslation(s_pagetitle[i]), i ? false : true, i);
     }
 
@@ -217,7 +217,7 @@ void mmOptionsDialog::OnApply(wxCommandEvent& /*event*/)
     if (m_panel_list[selected_page]->SaveSettings())
     {
         const wxString& msg = wxString::Format(_("%s page has been saved."), _(s_pagetitle[selected_page]));
-        wxMessageBox(msg, _("MMEX Options"));
+        wxMessageBox(msg, _("Settings"));
     }
 
     Model_Setting::instance().ReleaseSavepoint();

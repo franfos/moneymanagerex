@@ -75,9 +75,9 @@ simplicity and user-friendliness – an application that can be used everyday.
                  title="Category Manager – unlimited nested multi-level category support (MMEX 1.7.1-RC.1 64-bit on Linux Mint 21.3 Cinnamon)">
         </td>
         <td>
-            <img src="https://github.com/moneymanagerex/moneymanagerex/assets/17465872/b69b1eba-e476-4755-b64c-1eec2946f4a8" 
-                 alt="Transaction Report Filter (MMEX 1.7.1-RC.1 64-bit on Linux Mint 21.3 Cinnamon)" 
-                 title="Transaction Report Filter (MMEX 1.7.1-RC.1 64-bit on Linux Mint 21.3 Cinnamon)">
+            <img src="https://github.com/moneymanagerex/moneymanagerex/assets/17465872/d9dcdcd8-abda-4ae5-b6e4-4d137ef99613" 
+                 alt="Customise Transaction Report – English (British) (MMEX 1.8.1-Beta.1 64-bit on Linux Mint 21.3 Cinnamon)" 
+                 title="Customise Transaction Report – English (British) (MMEX 1.8.1-Beta.1 64-bit on Linux Mint 21.3 Cinnamon)">
         </td>
     </tr>
     <tr>

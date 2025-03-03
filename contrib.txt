@@ -226,6 +226,29 @@ Urias Jimenez
 Mihkel Loderaud
 Adam Leinss
 Mariano Rossello
+Alberto Ghilardi
+Daniel Vittet
+John Weaving
+Peter Hulm
+Angel Fernandez
+Carol Williams
+Herve Farge
+Ricardo Valencia Melendez
+Jill Solomon
+James Rogers
+Harold Horton
+Vijay Varadarajan
+Gordon Bassett
+Cornelio Achille
+Ricardo Iturriaga
+Ciro Caruso
+Pascal Freland
+Detlef Straube
+Stephan Kasslatter
+Panagiotis Theodosopoulos
+Antonis Vithoulkas
+Jean-Michel Louiset
+Marino Lippi
 
 ### 2023
 Renato

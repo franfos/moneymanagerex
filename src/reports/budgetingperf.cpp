@@ -84,7 +84,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
         evaluateTransfer = true;
     }
     //Get statistics
-    std::map<int, Model_Budget::PERIOD_ENUM> budgetPeriod;
+    std::map<int, Model_Budget::PERIOD_ID> budgetPeriod;
     std::map<int, double> budgetAmt;
     std::map<int, wxString> budgetNotes;
     Model_Budget::instance().getBudgetEntry(m_date_selection, budgetPeriod, budgetAmt, budgetNotes);
@@ -290,6 +290,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
                             hb.endTableRow();
                             totals_stack.pop_back();
                         }
+                    estimateTotal[12] = 0;  // reset estimateTotal for new category
                 }
 
                 // the very last subcategory, so show the rest of the pending totals

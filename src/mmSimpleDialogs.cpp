@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "platfdep.h"
 #include "tagdialog.h"
 #include "util.h"
+#include "validators.h"
 
 #include "model/Model_Account.h"
 #include "model/Model_Setting.h"
@@ -100,7 +101,201 @@ void mmCalendarPopup::OnEndSelection(wxCalendarEvent& event)
     m_datePicker->GetEventHandler()->AddPendingEvent(evt);
 }
 
-//------------
+//----------------------------------------------------------------------------
+// mmCalculatorPopup
+//----------------------------------------------------------------------------
+
+mmCalculatorPopup::mmCalculatorPopup(wxWindow* parent, mmTextCtrl* target) : wxPopupTransientWindow(parent, wxBORDER_THEME | wxPU_CONTAINS_CONTROLS), target_(target)
+{
+    wxWindow* panel = new wxWindow(this, wxID_ANY);
+    wxFont font = parent->GetFont();
+    SetFont(font);
+    int fontSize = font.GetPointSize();
+    wxSize btnSize = wxSize(fontSize + 25, fontSize + 25);
+    wxFlexGridSizer* sizer;
+    sizer = new wxFlexGridSizer(2, 1, 0, 0);
+    sizer->SetFlexibleDirection(wxVERTICAL);
+    sizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
+
+    valueTextCtrl_ = new mmTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT | wxTE_PROCESS_ENTER, mmCalcValidator());
+    valueTextCtrl_->SetFont(font);
+    valueTextCtrl_->SetIgnoreFocusChange(true);
+    sizer->Add(valueTextCtrl_, g_flagsExpand);
+
+    wxGridSizer* buttonSizer;
+    buttonSizer = new wxGridSizer(5, 4, 0, 0);
+    
+    button_lparen_ = new wxButton(panel, wxID_ANY, "(", wxDefaultPosition, btnSize);
+    button_lparen_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_lparen_->SetFont(font);
+    buttonSizer->Add(button_lparen_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_rparen_ = new wxButton(panel, wxID_ANY, ")", wxDefaultPosition, btnSize);
+    button_rparen_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_rparen_->SetFont(font);
+    buttonSizer->Add(button_rparen_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_clear_ = new wxButton(panel, wxID_ANY, "C", wxDefaultPosition, btnSize);
+    button_clear_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_clear_->SetFont(font);
+    buttonSizer->Add(button_clear_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_del_ = new wxButton(panel, mmID_DELETE, wxString::FromUTF8Unchecked("\u232b"), wxDefaultPosition, btnSize);
+    button_del_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_del_->SetFont(font);
+    buttonSizer->Add(button_del_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_7_ = new wxButton(panel, wxID_ANY, "7", wxDefaultPosition, btnSize);
+    button_7_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_7_->SetFont(font);
+    buttonSizer->Add(button_7_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_8_ = new wxButton(panel, wxID_ANY, "8", wxDefaultPosition, btnSize);
+    button_8_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_8_->SetFont(font);
+    buttonSizer->Add(button_8_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_9_ = new wxButton(panel, wxID_ANY, "9", wxDefaultPosition, btnSize);
+    button_9_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_9_->SetFont(font);
+    buttonSizer->Add(button_9_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_div_ = new wxButton(panel, mmID_DIVIDE, wxString::FromUTF8Unchecked("\u00f7"), wxDefaultPosition, btnSize);
+    button_div_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_div_->SetFont(font);
+    buttonSizer->Add(button_div_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_4_ = new wxButton(panel, wxID_ANY, "4", wxDefaultPosition, btnSize);
+    button_4_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_4_->SetFont(font);
+    buttonSizer->Add(button_4_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_5_ = new wxButton(panel, wxID_ANY, "5", wxDefaultPosition, btnSize);
+    button_5_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_5_->SetFont(font);
+    buttonSizer->Add(button_5_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_6_ = new wxButton(panel, wxID_ANY, "6", wxDefaultPosition, btnSize);
+    button_6_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_6_->SetFont(font);
+    buttonSizer->Add(button_6_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_mult_ = new wxButton(panel, mmID_MULTIPLY, wxString::FromUTF8Unchecked("\u00d7"), wxDefaultPosition, btnSize);
+    button_mult_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_mult_->SetFont(font);
+    buttonSizer->Add(button_mult_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_1_ = new wxButton(panel, wxID_ANY, "1", wxDefaultPosition, btnSize);
+    button_1_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_1_->SetFont(font);
+    buttonSizer->Add(button_1_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_2_ = new wxButton(panel, wxID_ANY, "2", wxDefaultPosition, btnSize);
+    button_2_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_2_->SetFont(font);
+    buttonSizer->Add(button_2_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_3_ = new wxButton(panel, wxID_ANY, "3", wxDefaultPosition, btnSize);
+    button_3_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_3_->SetFont(font);
+    buttonSizer->Add(button_3_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_minus_ = new wxButton(panel, wxID_ANY, "-", wxDefaultPosition, btnSize);
+    button_minus_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_minus_->SetFont(font);
+    buttonSizer->Add(button_minus_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_0_ = new wxButton(panel, wxID_ANY, "0", wxDefaultPosition, btnSize);
+    button_0_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_0_->SetFont(font);
+    buttonSizer->Add(button_0_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_dec_ = new wxButton(panel, wxID_ANY, ".", wxDefaultPosition, btnSize);
+    button_dec_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_dec_->SetFont(font);
+    buttonSizer->Add(button_dec_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_equal_ = new wxButton(panel, wxID_ANY, "=", wxDefaultPosition, btnSize);
+    button_equal_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_equal_->SetFont(font);
+    buttonSizer->Add(button_equal_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    button_plus_ = new wxButton(panel, wxID_ANY, "+", wxDefaultPosition, btnSize);
+    button_plus_->Bind(wxEVT_BUTTON, &mmCalculatorPopup::OnButtonPressed, this);
+    button_plus_->SetFont(font);
+    buttonSizer->Add(button_plus_, wxSizerFlags(g_flagsH).Border(wxALL, 1));
+
+    sizer->Add(buttonSizer, g_flagsH);
+
+    panel->SetSizer(sizer);
+    sizer->Fit(panel);
+    SetClientSize(panel->GetSize());
+}
+
+mmCalculatorPopup::~mmCalculatorPopup()
+{
+}
+
+void mmCalculatorPopup::SetValue(wxString& value)
+{
+    if (target_)
+        valueTextCtrl_->SetCurrency(target_->GetCurrency());
+    valueTextCtrl_->ChangeValue(value);
+    valueTextCtrl_->SelectNone();
+    valueTextCtrl_->SetInsertionPointEnd();
+}
+
+void mmCalculatorPopup::OnButtonPressed(wxCommandEvent& event)
+{
+    wxButton* btn = dynamic_cast<wxButton*>(event.GetEventObject());
+    int id = event.GetId();
+    long from;
+    long to;
+    valueTextCtrl_->GetSelection(&from, &to);
+    wxString text = btn->GetLabel();
+    wxString value = valueTextCtrl_->GetValue();
+    int ip = valueTextCtrl_->GetInsertionPoint();
+
+    if (text == "=")
+    {
+        valueTextCtrl_->Calculate();
+        ip = valueTextCtrl_->GetLastPosition();
+    }
+    else if (text == "C")
+    {
+        valueTextCtrl_->ChangeValue("");
+        ip = 0;
+    }
+    else if (id == mmID_DELETE)
+    {
+        if (from != to)
+            valueTextCtrl_->ChangeValue(value.Remove(from, to - from));
+        else if (ip > 0)
+        {
+            valueTextCtrl_->Remove(ip - 1, ip);
+            ip -= 1;
+        }
+    }
+    else if (id == mmID_MULTIPLY)
+    {
+        valueTextCtrl_->WriteText("*");
+        ip += 1;
+    }
+    else if (id == mmID_DIVIDE)
+    {
+        valueTextCtrl_->WriteText("/");
+        ip += 1;
+    }
+    else
+    {
+        valueTextCtrl_->WriteText(text);
+        ip += 1;
+    }
+    valueTextCtrl_->SetFocus();
+    valueTextCtrl_->SelectNone();
+    valueTextCtrl_->SetInsertionPoint(ip);
+}
+    //------------
 
 wxBEGIN_EVENT_TABLE(mmComboBox, wxComboBox)
 EVT_SET_FOCUS(mmComboBox::OnSetFocus)
@@ -116,7 +311,7 @@ mmComboBox::mmComboBox(wxWindow* parent, wxWindowID id, wxSize size)
     Bind(wxEVT_CHAR, &mmComboBox::OnKeyPressed, this);
 }
 
-void mmComboBox::OnDropDown(wxCommandEvent& event)
+void mmComboBox::OnDropDown(wxCommandEvent&)
 {
     wxFocusEvent evt;
     OnSetFocus(evt);
@@ -276,8 +471,8 @@ void mmComboBoxAccount::init()
 mmComboBoxAccount::mmComboBoxAccount(wxWindow* parent, wxWindowID id
     , wxSize size, int accountID, bool excludeClosed)
     : mmComboBox(parent, id, size)
-    , excludeClosed_(excludeClosed)
     , accountID_(accountID)
+    , excludeClosed_(excludeClosed)     
 {
     init();
     wxArrayString choices;
@@ -303,8 +498,8 @@ void mmComboBoxPayee::init()
 mmComboBoxPayee::mmComboBoxPayee(wxWindow* parent, wxWindowID id
                     , wxSize size, int payeeID, bool excludeHidden)
     : mmComboBox(parent, id, size)
-    , excludeHidden_(excludeHidden)
     , payeeID_(payeeID)
+    , excludeHidden_(excludeHidden)    
 {
     init();
     wxArrayString choices;
@@ -373,9 +568,9 @@ void mmComboBoxCategory::init()
 // excludeHidden = set to true if hidden categories should be excluded
 mmComboBoxCategory::mmComboBoxCategory(wxWindow* parent, wxWindowID id
                     , wxSize size, int catID, bool excludeHidden)
-    : mmComboBox(parent, id, size)
-    , excludeHidden_(excludeHidden)
+    : mmComboBox(parent, id, size)    
     , catID_(catID)
+    , excludeHidden_(excludeHidden)
 {
     init();
     wxArrayString choices;
@@ -413,7 +608,7 @@ mmComboBoxCustom::mmComboBoxCustom(wxWindow* parent, wxArrayString& a, wxWindowI
 
 mmDatePickerCtrl::mmDatePickerCtrl(wxWindow* parent, wxWindowID id, wxDateTime dt, wxPoint pos, wxSize size, long style)
     : wxPanel(parent, id, pos, size, style)
-    , parent_(parent), dt_(dt)
+    , dt_(dt), parent_(parent)
 {
     if (!dt.IsValid())
         dt_ = wxDateTime::Now();
@@ -536,7 +731,7 @@ void mmDatePickerCtrl::OnDateChanged(wxDateEvent& event)
     event.Skip();
 }
 
-void mmDatePickerCtrl::OnDateSpin(wxSpinEvent& event)
+void mmDatePickerCtrl::OnDateSpin(wxSpinEvent&)
 {
     if (spinButton_)
     {
@@ -569,10 +764,10 @@ void mmColorButton::OnMenuSelected(wxCommandEvent& event)
     if (GetSize().GetX() > 40)
     {
         if (m_color_value <= 0) {
-            SetLabel(wxString::Format(_("Clear color")));
+            SetLabel(wxString::Format(_("&Clear color")));
         }
         else {
-            SetLabel(wxString::Format(_("Color #%i"), m_color_value));
+            SetLabel(wxString::Format(_("Color #&%i"), m_color_value));
         }
     }
     event.Skip();
@@ -581,12 +776,12 @@ void mmColorButton::OnMenuSelected(wxCommandEvent& event)
 void mmColorButton::OnColourButton(wxCommandEvent& event)
 {
     wxMenu mainMenu;
-    wxMenuItem* menuItem = new wxMenuItem(&mainMenu, wxID_HIGHEST, wxString::Format(_("Clear color"), 0));
+    wxMenuItem* menuItem = new wxMenuItem(&mainMenu, wxID_HIGHEST, wxString::Format(_("&Clear color"), 0));
     mainMenu.Append(menuItem);
 
     for (int i = 1; i <= 7; ++i)
     {
-        menuItem = new wxMenuItem(&mainMenu, wxID_HIGHEST + i, wxString::Format(_("Color #%i"), i));
+        menuItem = new wxMenuItem(&mainMenu, wxID_HIGHEST + i, wxString::Format(_("Color #&%i"), i));
 #ifdef __WXMSW__
         menuItem->SetBackgroundColour(getUDColour(i)); //only available for the wxMSW port.
         menuItem->SetTextColour(*bestFontColour(getUDColour(i)));
@@ -822,7 +1017,7 @@ void mmErrorDialogs::InvalidFile(wxWindow *object, bool open)
 
 void mmErrorDialogs::InvalidAccount(wxWindow *object, bool transfer, TOOL_TIP tm)
 {
-    const wxString& errorHeader = _("Invalid Account");
+    const wxString errorHeader = _("Invalid Account");
     wxString errorMessage;
     if (!transfer)
         errorMessage = _("Please select the account for this transaction.");
@@ -841,8 +1036,8 @@ void mmErrorDialogs::InvalidAccount(wxWindow *object, bool transfer, TOOL_TIP tm
 
 void mmErrorDialogs::InvalidPayee(wxWindow *object)
 {
-    const wxString& errorHeader = _("Invalid Payee");
-    const wxString& errorMessage = _("Please type in a new payee,\n"
+    const wxString errorHeader = _("Invalid Payee");
+    const wxString errorMessage = _("Please type in a new payee,\n"
         "or make a selection using the dropdown button.")
         + "\n";
     ToolTip4Object(object, errorMessage, errorHeader, wxICON_ERROR);
@@ -850,7 +1045,7 @@ void mmErrorDialogs::InvalidPayee(wxWindow *object)
 
 void mmErrorDialogs::InvalidName(wxTextCtrl *textBox, bool alreadyexist)
 {
-    const wxString& errorHeader = _("Invalid Name");
+    const wxString errorHeader = _("Invalid Name");
     wxString errorMessage;
     if (alreadyexist)
         errorMessage = _("Already exist!");
@@ -862,7 +1057,7 @@ void mmErrorDialogs::InvalidName(wxTextCtrl *textBox, bool alreadyexist)
 
 void mmErrorDialogs::InvalidSymbol(wxTextCtrl *textBox, bool alreadyexist)
 {
-    const wxString& errorHeader = _("Invalid Name");
+    const wxString errorHeader = _("Invalid Name");
     wxString errorMessage;
     if (alreadyexist)
         errorMessage = _("Already exist!");
@@ -1002,7 +1197,7 @@ mmTagTextCtrl::mmTagTextCtrl(wxWindow* parent, wxWindowID id,
     Bind(wxEVT_PAINT, &mmTagTextCtrl::OnPaint, this);
     textCtrl_->Bind(wxEVT_KILL_FOCUS, &mmTagTextCtrl::OnKillFocus, this);
     textCtrl_->Bind(wxEVT_CHAR_HOOK, &mmTagTextCtrl::OnKeyPressed, this);
-    textCtrl_->Bind(wxEVT_STC_ZOOM, [this](wxStyledTextEvent& event) {
+    textCtrl_->Bind(wxEVT_STC_ZOOM, [this](wxStyledTextEvent& ) {
         // Disable zoom
         textCtrl_->SetEvtHandlerEnabled(false);
         textCtrl_->SetZoom(0);
@@ -1031,7 +1226,7 @@ mmTagTextCtrl::mmTagTextCtrl(wxWindow* parent, wxWindowID id,
     createDropButton(btnSize);
 
     btn_dropdown_->Bind(wxEVT_BUTTON, &mmTagTextCtrl::OnDropDown, this);
-    btn_dropdown_->Bind(wxEVT_NAVIGATION_KEY, [this](wxNavigationKeyEvent& event) { textCtrl_->SetFocus(); });
+    btn_dropdown_->Bind(wxEVT_NAVIGATION_KEY, [this](wxNavigationKeyEvent& ) { textCtrl_->SetFocus(); });
 
 #ifndef __WXMAC__
     // Event handlers for custom control painting in Windows & Linux
@@ -1039,7 +1234,7 @@ mmTagTextCtrl::mmTagTextCtrl(wxWindow* parent, wxWindowID id,
     Bind(wxEVT_LEAVE_WINDOW, &mmTagTextCtrl::OnMouseCaptureChange, this);
     textCtrl_->Bind(wxEVT_ENTER_WINDOW, &mmTagTextCtrl::OnMouseCaptureChange, this);
     textCtrl_->Bind(wxEVT_LEAVE_WINDOW, &mmTagTextCtrl::OnMouseCaptureChange, this);
-    textCtrl_->Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {textCtrl_->Refresh(); });
+    textCtrl_->Bind(wxEVT_SIZE, [this](wxSizeEvent& ) {textCtrl_->Refresh(); });
     btn_dropdown_->Bind(wxEVT_LEAVE_WINDOW, &mmTagTextCtrl::OnMouseCaptureChange, this);
     btn_dropdown_->Bind(wxEVT_SET_FOCUS, &mmTagTextCtrl::OnFocusChange, this);
     btn_dropdown_->Bind(wxEVT_ENTER_WINDOW, &mmTagTextCtrl::OnMouseCaptureChange, this);
@@ -1221,7 +1416,7 @@ void mmTagTextCtrl::OnFocusChange(wxFocusEvent& event)
     event.Skip();
 }
 
-void mmTagTextCtrl::OnDropDown(wxCommandEvent& event)
+void mmTagTextCtrl::OnDropDown(wxCommandEvent& )
 {
 #ifndef __WXMAC__    
     if (!popupWindow_->dismissedByButton_)
@@ -1508,7 +1703,7 @@ void mmTagTextCtrl::OnPaint(wxPaintEvent& event)
     event.Skip();
 }
 
-void mmTagTextCtrl::OnPaintButton(wxPaintEvent& event)
+void mmTagTextCtrl::OnPaintButton(wxPaintEvent& )
 {
     wxPaintDC dc(btn_dropdown_);
 
@@ -1557,7 +1752,6 @@ bool mmTagTextCtrl::Validate(const wxString& tagText)
 
     textCtrl_->SetEvtHandlerEnabled(false);
     wxString tags_out;
-    bool newTagCreated = false;
     bool is_valid = true;
     // parse the tags and prompt to create any which don't exist
     for (const auto& tag : parseTags(tags_in))
@@ -1574,7 +1768,6 @@ bool mmTagTextCtrl::Validate(const wxString& tagText)
             // Prompt user to create a new tag
             if (wxMessageDialog(nullptr, wxString::Format(_("Create new tag '%s'?"), tag), _("New tag entered"), wxYES_NO).ShowModal() == wxID_YES)
             {
-                newTagCreated = true;
                 Model_Tag::Data* newTag = Model_Tag::instance().create();
                 newTag->TAGNAME = tag;
                 newTag->ACTIVE = 1;

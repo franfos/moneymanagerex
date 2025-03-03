@@ -58,7 +58,7 @@ void OptionSettingsView::Create()
     viewsPanelSizer0->Add(view_panel, wxSizerFlags(g_flagsExpand).Proportion(0));
 
     // View Options
-    wxStaticBox* viewStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("View Options"));
+    wxStaticBox* viewStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("View"));
     SetBoldFont(viewStaticBox);
 
     wxStaticBoxSizer* viewStaticBoxSizer = new wxStaticBoxSizer(viewStaticBox, wxVERTICAL);
@@ -113,7 +113,7 @@ void OptionSettingsView::Create()
     view_sizer1->Add(m_showMoneyTips, g_flagsH);
 
     // Transaction/Budget options
-    wxStaticBox* trxStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("Transaction/Budget Options"));
+    wxStaticBox* trxStaticBox = new wxStaticBox(view_panel, wxID_STATIC, _("Transaction/Budget"));
     SetBoldFont(trxStaticBox);
     wxStaticBoxSizer* trxStaticBoxSizer = new wxStaticBoxSizer(trxStaticBox, wxVERTICAL);
     viewsPanelSizer->Add(trxStaticBoxSizer, wxSizerFlags(g_flagsExpand).Proportion(0));
@@ -309,7 +309,7 @@ void OptionSettingsView::Create()
     }
 
     view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Toolbar Icon Size")), g_flagsH);
-    view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Navigation Icon Size")), g_flagsH);
+    view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Navigator Icon Size")), g_flagsH);
     view_sizer3->Add(new wxStaticText(view_panel, wxID_STATIC, _("Others Icon Size")), g_flagsH);
 
     view_sizer3->Add(m_toolbar_icon_size, g_flagsH);
@@ -377,7 +377,7 @@ void OptionSettingsView::OnNavTreeColorChanged(wxCommandEvent& event)
     }
 }
 
-void OptionSettingsView::OnThemeManagerSelected(wxCommandEvent& event)
+void OptionSettingsView::OnThemeManagerSelected(wxCommandEvent&)
 {
     mmThemesDialog dlg(this);
     dlg.ShowModal();

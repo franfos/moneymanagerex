@@ -201,6 +201,10 @@ void mmEditPayeeDialog::OnOk(wxCommandEvent& /*event*/)
         return mmErrorDialogs::ToolTip4Object(m_category, _("Invalid value"), _("Category"));
 
     wxString name = m_payeeName->GetValue();
+
+    if (name.IsEmpty())
+        return mmErrorDialogs::ToolTip4Object(m_payeeName, _("Invalid value"), _("Payee"));
+
     Model_Payee::Data_Set payees = Model_Payee::instance().find(Model_Payee::PAYEENAME(name));
     if ((!m_payee && payees.empty()) ||
         (m_payee && (payees.empty() || name.CmpNoCase(m_payee->PAYEENAME) == 0)))
@@ -253,7 +257,7 @@ void mmEditPayeeDialog::OnMoveUp(wxCommandEvent& /*event*/)
     //wxGrid row and cell selections do not overlap, so need to get both and combine them
     wxArrayInt selectedRows = m_patternTable->GetSelectedRows();
     wxGridCellCoordsArray selectedCells = m_patternTable->GetSelectedCells();
-    for (int i = 0; i < selectedCells.GetCount(); i++) {
+    for (int i = 0; i < static_cast<int>(selectedCells.GetCount()); i++) {
         int row = selectedCells[i].GetRow();
         if(selectedRows.Index(row) == wxNOT_FOUND)
             selectedRows.Add(row);
@@ -272,7 +276,7 @@ void mmEditPayeeDialog::OnMoveUp(wxCommandEvent& /*event*/)
     }
 
     //Loop over all rows
-    for (int i = 0; i < selectedRows.GetCount(); i++) {
+    for (int i = 0; i < static_cast<int>(selectedRows.GetCount()); i++) {
         // reselect the row (cleared by cursor move)
         m_patternTable->SelectRow(selectedRows[i], true);
         // we only want to move the cell up if the row above is not selected (so that selected blocks stay in order)
@@ -308,7 +312,7 @@ void mmEditPayeeDialog::OnMoveDown(wxCommandEvent& /*event*/)
     //wxGrid row and cell selections do not overlap, so need to get both and combine them
     wxArrayInt selectedRows = m_patternTable->GetSelectedRows();
     wxGridCellCoordsArray selectedCells = m_patternTable->GetSelectedCells();
-    for (int i = 0; i < selectedCells.GetCount(); i++) {
+    for (int i = 0; i < static_cast<int>(selectedCells.GetCount()); i++) {
         int row = selectedCells[i].GetRow();
         if (selectedRows.Index(row) == wxNOT_FOUND)
             selectedRows.Add(row);
@@ -396,7 +400,7 @@ void mmEditPayeeDialog::OnPatternTableChanged(wxGridEvent& event)
     ResizeDialog();
 }
 
-void mmEditPayeeDialog::OnPatternTableSize(wxSizeEvent& event)
+void mmEditPayeeDialog::OnPatternTableSize(wxSizeEvent&)
 {
     m_patternTable->SetColSize(0, m_patternTable->GetGridWindow()->GetSize().x);
 }
@@ -440,9 +444,9 @@ mmPayeeDialog::~mmPayeeDialog()
 
 mmPayeeDialog::mmPayeeDialog(wxWindow* parent, bool payee_choose, const wxString& name, const wxString& payee_selected) :
     m_payee_choose(payee_choose)
-    , m_sort(PAYEE_NAME)
-    , m_lastSort(PAYEE_NAME)
     , m_init_selected_payee(payee_selected)
+    , m_sort(PAYEE_NAME)
+    , m_lastSort(PAYEE_NAME)    
 {
     ColName_[PAYEE_NAME] = _("Name");
     ColName_[PAYEE_HIDDEN] = _("Hidden");

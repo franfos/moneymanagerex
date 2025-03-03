@@ -51,8 +51,8 @@ mmReportsPanel::mmReportsPanel(
     wxWindowID winid, const wxPoint& pos,
     const wxSize& size, long style,
     const wxString& name)
-    : rb_(rb)
-    , m_frame(frame)
+    : m_frame(frame)
+    , rb_(rb)
     , cleanup_(cleanupReport)
 {
     Create(parent, winid, pos, size, style, name);
@@ -329,14 +329,19 @@ void mmReportsPanel::CreateControls()
             for (const auto& e : Model_Budgetyear::instance().all(Model_Budgetyear::COL_BUDGETYEARNAME))
             {
                 const wxString& name = e.BUDGETYEARNAME;
-                if (name.length() == 4) // Only years
+
+                if (rb_->getReportId() == mmPrintableBase::Reports::BudgetCategorySummary || name.length() == 4) // Only years for performance report
                 {
                     m_date_ranges->Append(name, new wxStringClientData(wxString::Format("%i", e.BUDGETYEARID)));
                     if (sel_id == e.BUDGETYEARID)
                         sel_name = e.BUDGETYEARNAME;
                 }
             }
-            m_date_ranges->SetStringSelection(sel_name);
+
+            if (!sel_name.IsEmpty())
+                m_date_ranges->SetStringSelection(sel_name);
+            else
+                m_date_ranges->SetSelection(0);
 
             itemBoxSizerHeader->Add(m_date_ranges, 0, wxALL | wxALIGN_CENTER_VERTICAL, 1);
             itemBoxSizerHeader->AddSpacer(30);
@@ -351,9 +356,9 @@ void mmReportsPanel::CreateControls()
             m_accounts = new wxChoice(itemPanel3, ID_CHOICE_ACCOUNTS);
             m_accounts->Append(_("All Accounts:"));
             m_accounts->Append(_("Specific Accounts:"));
-            for (const auto& e : Model_Account::instance().TYPE_CHOICES)
+            for (const auto& e : Model_Account::TYPE_CHOICES)
             {
-                if (e.first != Model_Account::INVESTMENT) {
+                if (e.first != Model_Account::TYPE_ID_INVESTMENT) {
                     m_accounts->Append(wxGetTranslation(e.second), new wxStringClientData(e.second));
                 }
             }

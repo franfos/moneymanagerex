@@ -40,7 +40,7 @@ public:
 
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Merge categories")
+        , const wxString& caption = _("Merge Categories")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX
@@ -49,7 +49,7 @@ public:
     void CreateControls();
 
     // utility functions
-    void OnTextUpdated(wxCommandEvent& event);
+    void OnTextUpdated(wxCommandEvent&);
     void OnFocusChange(wxChildFocusEvent& event);
     void OnComboKey(wxKeyEvent& event);
     void OnCancel(wxCommandEvent& event);
@@ -59,8 +59,8 @@ public:
 
 private:
     void IsOkOk();
-    int m_sourceCatID;
-    int m_sourceSubCatID;
+    int m_sourceCatID = -1;
+    int m_sourceSubCatID = -1;
     mmComboBoxCategory* cbSourceCategory_ = nullptr;
     mmComboBoxCategory* cbDestCategory_ = nullptr;
     wxCheckBox* cbDeleteSourceCategory_ = nullptr;

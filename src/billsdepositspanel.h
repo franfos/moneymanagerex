@@ -86,6 +86,28 @@ public:
         ICON_DOWNARROW
     };
 
+    enum EColumn
+    {
+        COL_ICON = 0,
+        COL_ID,
+        COL_PAYMENT_DATE,
+        COL_DUE_DATE,
+        COL_ACCOUNT,
+        COL_PAYEE,
+        COL_STATUS,
+        COL_CATEGORY,
+        COL_TAGS,
+        COL_TYPE,
+        COL_AMOUNT,
+        COL_FREQUENCY,
+        COL_REPEATS,
+        COL_AUTO,
+        COL_DAYS,
+        COL_NUMBER,
+        COL_NOTES,
+        COL_MAX, // number of columns
+    };
+
     mmBillsDepositsPanel(wxWindow *parent
         , wxWindowID winid = wxID_ANY
         , const wxPoint& pos = wxDefaultPosition
@@ -108,6 +130,7 @@ public:
     int col_sort();
 
     const wxString GetFrequency(const Model_Billsdeposits::Data* item) const;
+    int GetNumRepeats(const Model_Billsdeposits::Data* item) const;
     const wxString GetRemainingDays(const Model_Billsdeposits::Data* item) const;
 
     wxString BuildPage() const;
@@ -144,28 +167,6 @@ private:
     wxStaticText* m_infoText = nullptr;
     wxStaticText* m_infoTextMini = nullptr;
     wxDate m_today;
-
-    enum EColumn
-    {
-        COL_ICON = 0,
-        COL_ID,
-        COL_PAYMENT_DATE,
-        COL_DUE_DATE,
-        COL_ACCOUNT,
-        COL_PAYEE,
-        COL_STATUS,
-        COL_CATEGORY,
-        COL_TAGS,
-        COL_TYPE,
-        COL_AMOUNT,
-        COL_FREQUENCY,
-        COL_REPEATS,
-        COL_AUTO,
-        COL_DAYS,
-        COL_NUMBER,
-        COL_NOTES,
-        COL_MAX, // number of columns
-    };
 
     bool transFilterActive_;
     void OnFilterTransactions(wxCommandEvent& WXUNUSED(event));

@@ -44,6 +44,7 @@
 #include "images_list.h"
 #include "maincurrencydialog.h"
 #include "mmcheckingpanel.h"
+#include "mmchecking_list.h"
 #include "mmex.h"
 #include "mmhelppanel.h"
 #include "mmhomepagepanel.h"
@@ -268,7 +269,7 @@ mmGUIFrame::mmGUIFrame(mmGUIApp* app, const wxString& title
     m_mgr.GetArtProvider()->SetMetric(3, 1);
 
     // "commit" all changes made to wxAuiManager
-    m_mgr.GetPane("Navigation").Caption(_("Navigation"));
+    m_mgr.GetPane("Navigation").Caption(_("Navigator"));
     m_mgr.GetPane("toolbar").Caption(_("Toolbar"));
     m_mgr.Update();
 
@@ -507,15 +508,13 @@ void mmGUIFrame::OnAutoRepeatTransactionsTimer(wxTimerEvent& /*event*/)
     //Auto scheduled transaction
     bool continueExecution = false;
 
-    Model_Billsdeposits::AccountBalance bal;
     Model_Billsdeposits& bills = Model_Billsdeposits::instance();
     for (const auto& q1 : bills.all())
     {
         bills.decode_fields(q1);
-        const wxDateTime payment_date = bills.TRANSDATE(q1);
         if (bills.autoExecuteManual() && bills.requireExecution())
         {
-            if (bills.allowExecution() && bills.AllowTransaction(q1, bal))
+            if (bills.allowExecution() && bills.AllowTransaction(q1))
             {
                 continueExecution = true;
                 mmBDDialog repeatTransactionsDlg(this, q1.BDID, false, true);
@@ -531,7 +530,7 @@ void mmGUIFrame::OnAutoRepeatTransactionsTimer(wxTimerEvent& /*event*/)
 
         if (bills.autoExecuteSilent() && bills.requireExecution())
         {
-            if (bills.allowExecution() && bills.AllowTransaction(q1, bal))
+            if (bills.allowExecution() && bills.AllowTransaction(q1))
             {
                 continueExecution = true;
                 Model_Checking::Data* tran = Model_Checking::instance().create();
@@ -547,6 +546,7 @@ void mmGUIFrame::OnAutoRepeatTransactionsTimer(wxTimerEvent& /*event*/)
                 tran->NOTES = q1.NOTES;
                 tran->CATEGID = q1.CATEGID;
                 tran->FOLLOWUPID = q1.FOLLOWUPID;
+                const wxDateTime payment_date = bills.TRANSDATE(q1);
                 tran->TRANSDATE = payment_date.FormatISOCombined();
                 tran->COLOR = q1.COLOR;
                 int transID = Model_Checking::instance().save(tran);
@@ -856,9 +856,9 @@ void mmGUIFrame::DoRecreateNavTreeControl(bool home_page)
 
         for (const auto& account : Model_Account::instance().all(Model_Account::COL_ACCOUNTNAME))
         {
-            if ((m_temp_view == VIEW_ACCOUNTS_OPEN_STR) && (Model_Account::status(account) != Model_Account::OPEN))
+            if ((m_temp_view == VIEW_ACCOUNTS_OPEN_STR) && (Model_Account::status_id(account) != Model_Account::STATUS_ID_OPEN))
                 continue;
-            else if (m_temp_view == VIEW_ACCOUNTS_CLOSED_STR && (Model_Account::status(account) == Model_Account::OPEN))
+            else if (m_temp_view == VIEW_ACCOUNTS_CLOSED_STR && (Model_Account::status_id(account) == Model_Account::STATUS_ID_OPEN))
                 continue;
             else if (m_temp_view == VIEW_ACCOUNTS_FAVORITES_STR && !Model_Account::FAVORITEACCT(account))
                 continue;
@@ -866,11 +866,11 @@ void mmGUIFrame::DoRecreateNavTreeControl(bool home_page)
             int selectedImage = Option::instance().AccountImageId(account.ACCOUNTID, false);
 
             wxTreeItemId tacct;
-            Model_Account::TYPE account_type = Model_Account::type(account);
-            if (Model_Account::FAVORITEACCT(account) && (Model_Account::status(account) == Model_Account::OPEN))
+            Model_Account::TYPE_ID account_type = Model_Account::type_id(account);
+            if (Model_Account::FAVORITEACCT(account) && (Model_Account::status_id(account) == Model_Account::STATUS_ID_OPEN))
             {
-                if (Model_Account::type(account) != Model_Account::INVESTMENT &&
-                    (account_type != Model_Account::SHARES || !hideShareAccounts))
+                if (Model_Account::type_id(account) != Model_Account::TYPE_ID_INVESTMENT &&
+                    (account_type != Model_Account::TYPE_ID_SHARES || !hideShareAccounts))
                 {
                     tacct = m_nav_tree_ctrl->AppendItem(favorites, account.ACCOUNTNAME, selectedImage, selectedImage);
                     m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
@@ -879,7 +879,7 @@ void mmGUIFrame::DoRecreateNavTreeControl(bool home_page)
 
             switch (account_type)
             {
-            case Model_Account::INVESTMENT:
+            case Model_Account::TYPE_ID_INVESTMENT:
             {
                 tacct = m_nav_tree_ctrl->AppendItem(stocks, account.ACCOUNTNAME, selectedImage, selectedImage);
                 m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::STOCK, account.ACCOUNTID));
@@ -901,34 +901,34 @@ void mmGUIFrame::DoRecreateNavTreeControl(bool home_page)
                 }
                 break;
             }
-            case Model_Account::CHECKING:
+            case Model_Account::TYPE_ID_CHECKING:
                 tacct = m_nav_tree_ctrl->AppendItem(accounts, account.ACCOUNTNAME, selectedImage, selectedImage);
                 m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
                 break;
-            case Model_Account::SHARES:
+            case Model_Account::TYPE_ID_SHARES:
                 if (!hideShareAccounts)
                 {
                     tacct = m_nav_tree_ctrl->AppendItem(shareAccounts, account.ACCOUNTNAME, selectedImage, selectedImage);
                     m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
                 }
                 break;
-            case Model_Account::ASSET:
+            case Model_Account::TYPE_ID_ASSET:
                 tacct = m_nav_tree_ctrl->AppendItem(assets, account.ACCOUNTNAME, selectedImage, selectedImage);
                 m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
                 break;
-            case Model_Account::TERM:
+            case Model_Account::TYPE_ID_TERM:
                 tacct = m_nav_tree_ctrl->AppendItem(termAccounts, account.ACCOUNTNAME, selectedImage, selectedImage);
                 m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
                 break;
-            case Model_Account::CREDIT_CARD:
+            case Model_Account::TYPE_ID_CREDIT_CARD:
                 tacct = m_nav_tree_ctrl->AppendItem(cardAccounts, account.ACCOUNTNAME, selectedImage, selectedImage);
                 m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
                 break;
-            case Model_Account::CASH:
+            case Model_Account::TYPE_ID_CASH:
                 tacct = m_nav_tree_ctrl->AppendItem(cashAccounts, account.ACCOUNTNAME, selectedImage, selectedImage);
                 m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
                 break;
-            case Model_Account::LOAN:
+            case Model_Account::TYPE_ID_LOAN:
                 tacct = m_nav_tree_ctrl->AppendItem(loanAccounts, account.ACCOUNTNAME, selectedImage, selectedImage);
                 m_nav_tree_ctrl->SetItemData(tacct, new mmTreeItemData(mmTreeItemData::ACCOUNT, account.ACCOUNTID));
                 break;
@@ -1391,7 +1391,7 @@ void mmGUIFrame::OnPopupDeleteAccount(wxCommandEvent& /*event*/)
         if (account)
         {
             wxString warning_msg = _("Do you really want to delete the account?");
-            if (account->ACCOUNTTYPE == Model_Account::all_type()[Model_Account::INVESTMENT] || account->ACCOUNTTYPE == Model_Account::all_type()[Model_Account::SHARES])
+            if (account->ACCOUNTTYPE == Model_Account::TYPE_STR_INVESTMENT || account->ACCOUNTTYPE == Model_Account::TYPE_STR_SHARES)
             {
                 warning_msg += "\n\nThis will also delete any associated Shares.";
             }
@@ -1472,9 +1472,9 @@ void mmGUIFrame::showTreePopupMenu(const wxTreeItemId& id, const wxPoint& pt)
     {
         const wxString data = iData->getString();
         wxLogDebug("MENU FILTER: %s", data);
-        menu.Append(MENU_TREEPOPUP_FILTER_EDIT, _("&Edit Filter..."));
-        menu.Append(MENU_TREEPOPUP_FILTER_RENAME, _("&Rename Filter..."));
-        menu.Append(MENU_TREEPOPUP_FILTER_DELETE, _("&Delete Filter..."));
+        menu.Append(MENU_TREEPOPUP_FILTER_EDIT, _("&Customize Report..."));
+        menu.Append(MENU_TREEPOPUP_FILTER_RENAME, _("&Rename Report..."));
+        menu.Append(MENU_TREEPOPUP_FILTER_DELETE, _("&Delete Report..."));
         PopupMenu(&menu, pt);
         break;
     }
@@ -1516,7 +1516,7 @@ void mmGUIFrame::showTreePopupMenu(const wxTreeItemId& id, const wxPoint& pt)
             menu.Append(MENU_TREEPOPUP_LAUNCHWEBSITE, _("&Launch Account Website"));
             menu.Append(MENU_TREEPOPUP_ACCOUNTATTACHMENTS, _("&Attachment Manager..."));
             menu.Enable(MENU_TREEPOPUP_LAUNCHWEBSITE, !account->WEBSITE.IsEmpty());
-            menu.Enable(MENU_TREEPOPUP_REALLOCATE, account->ACCOUNTTYPE != Model_Account::all_type()[Model_Account::SHARES]);
+            menu.Enable(MENU_TREEPOPUP_REALLOCATE, account->ACCOUNTTYPE != Model_Account::TYPE_STR_SHARES);
             menu.AppendSeparator();
             AppendImportMenu(menu);
             PopupMenu(&menu, pt);
@@ -1623,7 +1623,7 @@ void mmGUIFrame::createMenu()
     menu_file->AppendSeparator();
 
     wxMenuItem* menuItemQuit = new wxMenuItem(menu_file, wxID_EXIT,
-        _("E&xit\tAlt-X"), _("Quit this program"));
+        _("E&xit\tCtrl-Q"), _("Quit this program"));
     menu_file->Append(menuItemQuit);
 
     // Create the required menu items
@@ -1631,11 +1631,11 @@ void mmGUIFrame::createMenu()
     wxMenuItem* menuItemToolbar = new wxMenuItem(menuView, MENU_VIEW_TOOLBAR,
         _("&Toolbar"), _("Show/Hide the toolbar"), wxITEM_CHECK);
     wxMenuItem* menuItemLinks = new wxMenuItem(menuView, MENU_VIEW_LINKS,
-        _("&Navigation"), _("Show/Hide the Navigation tree control"), wxITEM_CHECK);
+        _("&Navigator\tF5"), _("Show/Hide Navigator"), wxITEM_CHECK);
     wxMenuItem* menuItemHideShareAccounts = new wxMenuItem(menuView, MENU_VIEW_HIDE_SHARE_ACCOUNTS,
-        _("&Display Share Accounts"), _("Show/Hide Share Accounts in the navigation tree"), wxITEM_CHECK);
+        _("&Display Share Accounts"), _("Show/Hide Share Accounts in Navigator"), wxITEM_CHECK);
     wxMenuItem* menuItemHideDeletedTransactions = new wxMenuItem(menuView, MENU_VIEW_HIDE_DELETED_TRANSACTIONS,
-        _("&Display Deleted Transactions"), _("Show/Hide Deleted Transactions in the navigation tree"), wxITEM_CHECK);
+        _("&Display Deleted Transactions"), _("Show/Hide Deleted Transactions in Navigator"), wxITEM_CHECK);
     wxMenuItem* menuItemBudgetFinancialYears = new wxMenuItem(menuView, MENU_VIEW_BUDGET_FINANCIAL_YEARS,
         _("Budgets: As Financial &Years"), _("Display Budgets in Financial Year Format"), wxITEM_CHECK);
     wxMenuItem* menuItemBudgetTransferTotal = new wxMenuItem(menuView, MENU_VIEW_BUDGET_TRANSFER_TOTAL,
@@ -1667,12 +1667,13 @@ void mmGUIFrame::createMenu()
 
 #if (wxMAJOR_VERSION >= 3 && wxMINOR_VERSION >= 0)
     wxMenuItem* menuItemToggleFullscreen = new wxMenuItem(menuView, MENU_VIEW_TOGGLE_FULLSCREEN
-        , _("Toggle &Fullscreen\tShift+F11")
-        , _("Toggle Fullscreen"));
+        , _("&Full Screen\tF11")
+        , _("Toggle full screen")
+        , wxITEM_CHECK);
     menuView->Append(menuItemToggleFullscreen);
 #endif
 wxMenuItem* menuItemResetView = new wxMenuItem(menuView, MENU_VIEW_RESET
-        , _("Reset View")
+        , _("&Reset View")
         , _("Reset view and dock tools"));
     menuView->Append(menuItemResetView);   
 
@@ -1792,7 +1793,7 @@ wxMenuItem* menuItemResetView = new wxMenuItem(menuView, MENU_VIEW_RESET
     menuTools->AppendSeparator();
 
     wxMenuItem* menuItemTransactions = new wxMenuItem(menuTools, MENU_TRANSACTIONREPORT
-        , _("Transaction Report &Filter..."), _("Transaction Report Filter"));
+        , _("Tra&nsaction Report..."), _("Transaction Report"));
     menuTools->Append(menuItemTransactions);
 
     menuTools->AppendSeparator();
@@ -1813,7 +1814,7 @@ wxMenuItem* menuItemResetView = new wxMenuItem(menuView, MENU_VIEW_RESET
     menuTools->AppendSeparator();
 
     wxMenuItem* menuItemOptions = new wxMenuItem(menuTools, wxID_PREFERENCES
-        , _("&Options...\tCtrl-,"), _("Options"));
+        , _("&Settings...\tAlt-F12"), _("Settings"));
     menuTools->Append(menuItemOptions);
 
     menuTools->AppendSeparator();
@@ -1851,7 +1852,7 @@ wxMenuItem* menuItemResetView = new wxMenuItem(menuView, MENU_VIEW_RESET
         , _("&Website")
         , _("Visit MMEX website for the latest news and updates"));
     wxMenuItem* menuItemFacebook = new wxMenuItem(menuHelp, MENU_FACEBOOK
-        , _("&Facebook"), _("Visit MMEX Facebook page"));
+        , _("Face&book"), _("Visit MMEX Facebook page"));
     wxMenuItem* menuItemCrowdin = new wxMenuItem(menuHelp, MENU_CROWDIN
         , _("&Crowdin"), _("Help translate MMEX on Crowdin"));
     wxMenuItem* menuItemTwitter = new wxMenuItem(menuHelp, MENU_TWITTER
@@ -1863,10 +1864,10 @@ wxMenuItem* menuItemResetView = new wxMenuItem(menuView, MENU_VIEW_RESET
     wxMenuItem* menuItemGitHub = new wxMenuItem(menuHelp, MENU_GITHUB
         , _("&GitHub"), _("Access open source code repository and track reported bug statuses"));
     wxMenuItem* menuItemWiki = new wxMenuItem(menuHelp, MENU_WIKI
-        , _("W&iki pages"), _("Read and update wiki pages"));
+        , _("W&iki"), _("Read and update MMEX wiki"));
     wxMenuItem* menuItemReportIssues = new wxMenuItem(menuHelp, MENU_REPORTISSUES
-        , _("F&orum")
-        , _("Visit MMEX forum to read and post comments"));
+        , _("&Forum")
+        , _("Visit MMEX forum to read and post comments and for support"));
     wxMenuItem* menuItemGooglePlay = new wxMenuItem(menuHelp, MENU_GOOGLEPLAY
         , _("MMEX for &Android")
         , _("Install MMEX for Android based smartphones and tablets"));
@@ -1876,29 +1877,31 @@ wxMenuItem* menuItemResetView = new wxMenuItem(menuView, MENU_VIEW_RESET
     wxMenuItem* menuItemRSS = new wxMenuItem(menuHelp, MENU_RSS
         , _("&RSS Feed"), _("Connect RSS web feed to news aggregator"));
     wxMenuItem* menuItemDonate = new wxMenuItem(menuHelp, MENU_DONATE
-        , _("&Donate via PayPal")
-        , _("Donate the team to support infrastructure etc"));
+        , _("Make a &Donation")
+        , _("Donate to the MMEX team to support infrastructure and development"));
     wxMenuItem* menuItemBuyCoffee = new wxMenuItem(menuHelp, MENU_BUY_COFFEE
         , _("&Buy us a Coffee")
-        , _("Buy key developer a coffee"));
+        , _("Buy a key developer a coffee"));
 
     wxMenuItem* menuItemCommunity = new wxMenuItem(menuHelp, MENU_COMMUNITY
         , _("&Community")
         , _("Stay in touch with MMEX community"));
 
     wxMenu* menuCommunity = new wxMenu;
-    menuCommunity->Append(menuItemFacebook);
-    menuCommunity->Append(menuItemCrowdin);
+    menuCommunity->Append(menuItemWebsite);
     menuCommunity->Append(menuItemGitHub);
-    menuCommunity->Append(menuItemGooglePlay);
+    menuCommunity->Append(menuItemCrowdin);
+    menuCommunity->Append(menuItemWiki);
     menuCommunity->Append(menuItemNotify);
     menuCommunity->Append(menuItemReportIssues);
+    menuCommunity->AppendSeparator();
+    menuCommunity->Append(menuItemGooglePlay);
+    menuCommunity->AppendSeparator();
     menuCommunity->Append(menuItemRSS);
+    menuCommunity->Append(menuItemYouTube);
+    menuCommunity->Append(menuItemFacebook);
     menuCommunity->Append(menuItemSlack);
     menuCommunity->Append(menuItemTwitter);
-    menuCommunity->Append(menuItemWebsite);
-    menuCommunity->Append(menuItemWiki);
-    menuCommunity->Append(menuItemYouTube);
     menuCommunity->AppendSeparator();
     menuCommunity->Append(menuItemDonate);
     menuCommunity->Append(menuItemBuyCoffee);
@@ -1969,11 +1972,11 @@ void mmGUIFrame::CreateToolBar()
     toolBar_->AddTool(MENU_ORGTAGS, _("Tag Manager"), mmBitmapBundle(png::TAG, toolbar_icon_size), _("Tag Manager"));
     toolBar_->AddTool(MENU_CURRENCY, _("Currency Manager"), mmBitmapBundle(png::CURR, toolbar_icon_size), _("Currency Manager"));
     toolBar_->AddSeparator();
-    toolBar_->AddTool(MENU_TRANSACTIONREPORT, _("Transaction Report Filter"), mmBitmapBundle(png::FILTER, toolbar_icon_size), _("Transaction Report Filter"));
+    toolBar_->AddTool(MENU_TRANSACTIONREPORT, _("Transaction Report"), mmBitmapBundle(png::FILTER, toolbar_icon_size), _("Transaction Report"));
     toolBar_->AddSeparator();
     toolBar_->AddTool(wxID_VIEW_LIST, _("General Report Manager"), mmBitmapBundle(png::GRM, toolbar_icon_size), _("General Report Manager"));
     toolBar_->AddSeparator();
-    toolBar_->AddTool(wxID_PREFERENCES, _("&Options"), mmBitmapBundle(png::OPTIONS, toolbar_icon_size), _("Options Dialog"));
+    toolBar_->AddTool(wxID_PREFERENCES, _("&Settings"), mmBitmapBundle(png::OPTIONS, toolbar_icon_size), _("Settings"));
     toolBar_->AddSeparator();
 
     wxString news_array;
@@ -1991,7 +1994,7 @@ void mmGUIFrame::CreateToolBar()
     toolBar_->AddTool(MENU_RATES, _("Download Rates"), mmBitmapBundle(png::CURRATES, toolbar_icon_size), _("Download currency and stock rates"));
 
     toolBar_->AddSeparator();
-    toolBar_->AddTool(MENU_VIEW_TOGGLE_FULLSCREEN, _("Toggle Fullscreen\tF11"), mmBitmapBundle(png::FULLSCREEN, toolbar_icon_size), _("Toggle Fullscreen"));
+    toolBar_->AddTool(MENU_VIEW_TOGGLE_FULLSCREEN, _("Full Screen\tF11"), mmBitmapBundle(png::FULLSCREEN, toolbar_icon_size), _("Toggle full screen"));
 
     toolBar_->AddSeparator();
     toolBar_->AddTool(wxID_PRINT, _("&Print"), mmBitmapBundle(png::PRINT, toolbar_icon_size), _("Print"));
@@ -2368,8 +2371,12 @@ void mmGUIFrame::OnConvertEncryptedDB(wxCommandEvent& /*event*/)
     wxCopyFile(encFileName, fileName);
 
     wxSQLite3Database db;
-    db.Open(fileName, password);
-    db.ReKey(wxEmptyString);
+    wxSQLite3CipherSQLCipher cipher;
+    cipher.InitializeVersionDefault(4);
+    cipher.SetLegacy(true);
+
+    db.Open(fileName, cipher, password);
+    db.ReKey(cipher, wxEmptyString);
     db.Close();
 
     mmErrorDialogs::MessageError(this, _("Converted database!"), _("MMEX message"));
@@ -2397,7 +2404,11 @@ void mmGUIFrame::OnChangeEncryptPassword(wxCommandEvent& /*event*/)
                 wxString confirm_password = confirm_dlg.GetValue();
                 if (!confirm_password.IsEmpty() && (new_password == confirm_password))
                 {
-                    m_db->ReKey(confirm_password);
+                    wxSQLite3CipherSQLCipher cipher;
+                    cipher.InitializeVersionDefault(4);
+                    cipher.SetLegacy(true);
+
+                    m_db->ReKey(cipher, confirm_password);
                     wxMessageBox(_("Password change completed"), password_change_heading);
                 }
                 else
@@ -2478,7 +2489,7 @@ void mmGUIFrame::OnDebugDB(wxCommandEvent& /*event*/)
         , wxString::Format("%s\n\n%s", _("Please use this function only if requested by MMEX support and you have been supplied with a .mmdbg debug file"), _("Do you want to proceed?"))
         , _("Database Debug"), wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
 
-    msgDlg.SetYesNoLabels(_("Yes"), _("No"));
+    msgDlg.SetYesNoLabels(_("&Yes"), _("&No"));
 
     if (msgDlg.ShowModal() == wxID_YES)
     {
@@ -2551,8 +2562,13 @@ void mmGUIFrame::OnSaveAs(wxCommandEvent& /*event*/)
     if (rekey) // encrypt or reset encryption
     {
         wxSQLite3Database dbx;
-        dbx.Open(newFileName.GetFullPath(), m_password);
-        dbx.ReKey(new_password); // empty password resets encryption
+
+        wxSQLite3CipherSQLCipher cipher;
+        cipher.InitializeVersionDefault(4);
+        cipher.SetLegacy(true);
+
+        dbx.Open(newFileName.GetFullPath(), cipher, m_password);
+        dbx.ReKey(cipher, new_password); // empty password resets encryption
         dbx.Close();
     }
 
@@ -2684,7 +2700,7 @@ void mmGUIFrame::OnNewAccount(wxCommandEvent& /*event*/)
         Model_Account::Data* account = Model_Account::instance().get(wizard->acctID_);
         mmNewAcctDialog dlg(account, this);
         dlg.ShowModal();
-        if (account->ACCOUNTTYPE == Model_Account::all_type()[Model_Account::ASSET])
+        if (account->ACCOUNTTYPE == Model_Account::TYPE_STR_ASSET)
         {
             wxMessageBox(_(
                 "Asset Accounts hold Asset transactions\n\n"
@@ -2694,7 +2710,7 @@ void mmGUIFrame::OnNewAccount(wxCommandEvent& /*event*/)
             ), _("Asset Account Creation"));
         }
 
-        if (account->ACCOUNTTYPE == Model_Account::all_type()[Model_Account::SHARES])
+        if (account->ACCOUNTTYPE == Model_Account::TYPE_STR_SHARES)
         {
             wxMessageBox(wxGetTranslation(wxString::FromUTF8(wxTRANSLATE(
                 "Share Accounts hold Share transactions\n\n"
@@ -2725,7 +2741,7 @@ void mmGUIFrame::refreshPanelData(wxCommandEvent& /*event*/)
 }
 void mmGUIFrame::refreshPanelData()
 {
-    int id = panelCurrent_->GetId();
+    int id = panelCurrent_ ? panelCurrent_->GetId() : mmID_HOMEPAGE;
     wxLogDebug("Panel ID: %d", id);
 
     switch (id)
@@ -2906,9 +2922,9 @@ void mmGUIFrame::OnOptions(wxCommandEvent& /*event*/)
         if (id == mmID_CHECKING || id == mmID_ALLTRANSACTIONS || id == mmID_DELETEDTRANSACTIONS)
             wxDynamicCast(panelCurrent_, mmCheckingPanel)->ResetColumnView();
 
-        const wxString& sysMsg = _("MMEX Options have been updated.") + "\n\n"
+        const wxString& sysMsg = _("Settings have been updated.") + "\n\n"
             + _("Some settings take effect only after an application restart.");
-        wxMessageBox(sysMsg, _("MMEX Options"), wxOK | wxICON_INFORMATION);
+        wxMessageBox(sysMsg, _("Settings"), wxOK | wxICON_INFORMATION);
     }
 }
 //----------------------------------------------------------------------------
@@ -3434,7 +3450,7 @@ void mmGUIFrame::OnGotoAccount(wxCommandEvent& WXUNUSED(event))
     bool proper_type = false;
     Model_Account::Data *acc = Model_Account::instance().get(gotoAccountID_);
     if (acc)
-        proper_type = Model_Account::type(acc) != Model_Account::INVESTMENT;
+        proper_type = Model_Account::type_id(acc) != Model_Account::TYPE_ID_INVESTMENT;
     if (proper_type)
         createCheckingAccountPage(gotoAccountID_);
     m_nav_tree_ctrl->Refresh();
@@ -3445,7 +3461,7 @@ void mmGUIFrame::OnGotoStocksAccount(wxCommandEvent& WXUNUSED(event))
     bool proper_type = false;
     Model_Account::Data *acc = Model_Account::instance().get(gotoAccountID_);
     if (acc)
-        proper_type = Model_Account::type(acc) == Model_Account::INVESTMENT;
+        proper_type = Model_Account::type_id(acc) == Model_Account::TYPE_ID_INVESTMENT;
     if (proper_type)
         createStocksAccountPage(gotoAccountID_);
     m_nav_tree_ctrl->Refresh();
@@ -3628,8 +3644,9 @@ void mmGUIFrame::ReallocateAccount(int accountID)
 {
     Model_Account::Data* account = Model_Account::instance().get(accountID);
 
-    wxArrayString types = Model_Account::instance().all_type();
-    types.Remove(Model_Account::all_type()[Model_Account::INVESTMENT]);
+    wxArrayString types = Model_Account::TYPE_STR;
+    types.Remove(Model_Account::TYPE_STR_INVESTMENT);
+    types.Remove(account->ACCOUNTTYPE);
     wxArrayString t;
     for (const auto &entry : types)
         t.Add(wxGetTranslation(entry));

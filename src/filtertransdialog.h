@@ -139,9 +139,9 @@ private:
     const wxString mmGetNumber() const;
     const wxString mmGetNotes() const;
 
-    bool isMultiAccount_;
-    int accountID_;
-    bool isReportMode_;
+    bool isMultiAccount_ = false;
+    int accountID_ = -1;
+    bool isReportMode_ = false;
 
 private:
     void OnDateChanged(wxDateEvent& event);
@@ -160,7 +160,7 @@ private:
     /// Creation
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Transaction Report Filter")
+        , const wxString& caption = _("Customize Transaction Report")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX
@@ -241,8 +241,8 @@ private:
     wxString m_begin_date;
     wxString m_end_date;
     wxString m_filter_key;
-    int m_startDay;
-    bool m_futureIgnored;
+    int m_startDay = 0;
+    bool m_futureIgnored = false;
     int m_color_value = -1;
     wxString m_payee_str;
 

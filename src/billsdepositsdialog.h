@@ -80,18 +80,22 @@ private:
     void OnAutoExecutionSilentChecked(wxCommandEvent& event);
     void OnFocusChange(wxChildFocusEvent& event);
     void SetAmountCurrencies(int accountID, int toAccountID);
+    void OnCalculator(wxCommandEvent& event);
     int m_trans_id;
 
-    bool m_new_bill;
-    bool m_dup_bill;
-    bool m_enter_occur;
+    bool m_new_bill = false;
+    bool m_dup_bill = false;
+    bool m_enter_occur = false;
     bool autoExecuteUserAck_ = false;
     bool autoExecuteSilent_ = false;
     bool m_advanced = false;
 private:
+    wxButton* bCalc_ = nullptr;
+    mmCalculatorPopup* calcPopup_ = nullptr;
     wxTextCtrl* textNumber_ = nullptr;
     mmTextCtrl* textAmount_ = nullptr;
     mmTextCtrl* toTextAmount_ = nullptr;
+    mmTextCtrl* calcTarget_ = nullptr;
     wxTextCtrl* textNotes_ = nullptr;
     wxTextCtrl* textCategory_ = nullptr;
     wxTextCtrl* textNumRepeats_ = nullptr;
@@ -117,8 +121,8 @@ private:
     wxBitmapButton* m_btn_due_date = nullptr;
     mmTagTextCtrl* tagTextCtrl_ = nullptr;
 
-    bool m_transfer;
-    int object_in_focus_;
+    bool m_transfer = false;
+    int object_in_focus_ = wxID_ANY;
     wxSize min_size_;
     Model_Billsdeposits::Bill_Data m_bill_data;
 
@@ -142,6 +146,8 @@ private:
     void OnRepeatTypeChanged(wxCommandEvent& event);
     void OnsetPrevOrNextRepeatDate(wxCommandEvent& event);
     void setRepeatDetails();
+    int getRepeatType();
+    void setRepeatType(int repeatType);
     void OnMoreFields(wxCommandEvent& event);
 
     void activateSplitTransactionsDlg();

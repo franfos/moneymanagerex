@@ -136,7 +136,8 @@ void mmFilterTransactionsDialog::mmDoInitVariables()
     m_all_date_ranges.push_back(wxSharedPtr<mmDateRange>(new mmSinseCurrentFinancialYear()));
 
     m_accounts_name.clear();
-    const auto accounts = Model_Account::instance().find(Model_Account::ACCOUNTTYPE(Model_Account::all_type()[Model_Account::INVESTMENT], NOT_EQUAL));
+    const auto accounts = Model_Account::instance().find(
+        Model_Account::ACCOUNTTYPE(Model_Account::TYPE_STR_INVESTMENT, NOT_EQUAL));
     for (const auto& acc : accounts)
     {
         m_accounts_name.push_back(acc.ACCOUNTNAME);
@@ -1122,7 +1123,7 @@ void mmFilterTransactionsDialog::OnButtonOkClick(wxCommandEvent& /*event*/)
     }
 }
 
-void mmFilterTransactionsDialog::OnButtonCancelClick(wxCommandEvent& event)
+void mmFilterTransactionsDialog::OnButtonCancelClick(wxCommandEvent& WXUNUSED(event))
 {
 #ifdef __WXMSW__
     wxWindow* w = FindFocus();
@@ -1235,7 +1236,7 @@ bool mmFilterTransactionsDialog::mmIsStatusMatches(const wxString& itemStatus) c
     }
     else if ("A" == filterStatus) // All Except Reconciled
     {
-        return "R" != itemStatus;
+        return Model_Checking::STATUS_KEY_RECONCILED != itemStatus;
     }
     return false;
 }
@@ -1243,21 +1244,21 @@ bool mmFilterTransactionsDialog::mmIsStatusMatches(const wxString& itemStatus) c
 bool mmFilterTransactionsDialog::mmIsTypeMaches(const wxString& typeState, int accountid, int toaccountid) const
 {
     bool result = false;
-    if (typeState == Model_Checking::all_type()[Model_Checking::TRANSFER] && cbTypeTransferTo_->GetValue() &&
+    if (typeState == Model_Checking::TYPE_STR_TRANSFER && cbTypeTransferTo_->GetValue() &&
         (!mmIsAccountChecked() || (m_selected_accounts_id.Index(accountid) != wxNOT_FOUND)))
     {
         result = true;
     }
-    else if (typeState == Model_Checking::all_type()[Model_Checking::TRANSFER] && cbTypeTransferFrom_->GetValue() &&
+    else if (typeState == Model_Checking::TYPE_STR_TRANSFER && cbTypeTransferFrom_->GetValue() &&
              (!mmIsAccountChecked() || (m_selected_accounts_id.Index(toaccountid) != wxNOT_FOUND)))
     {
         result = true;
     }
-    else if (typeState == Model_Checking::all_type()[Model_Checking::WITHDRAWAL] && cbTypeWithdrawal_->IsChecked())
+    else if (typeState == Model_Checking::TYPE_STR_WITHDRAWAL && cbTypeWithdrawal_->IsChecked())
     {
         result = true;
     }
-    else if (typeState == Model_Checking::all_type()[Model_Checking::DEPOSIT] && cbTypeDeposit_->IsChecked())
+    else if (typeState == Model_Checking::TYPE_STR_DEPOSIT && cbTypeDeposit_->IsChecked())
     {
         result = true;
     }
@@ -1403,7 +1404,7 @@ bool mmFilterTransactionsDialog::mmIsTagMatches(const wxString& refType, int ref
     bool match = true;
 
     wxArrayString tags = tagTextCtrl_->GetTagStrings();
-    for (int i = 0; i < tags.GetCount(); i++)
+    for (int i = 0; i < static_cast<int>(tags.GetCount()); i++)
     {
         wxString tag = tags.Item(i);
         // if the tag is the "OR" operator, fetch the next tag and compare with OR
@@ -1495,7 +1496,7 @@ int mmFilterTransactionsDialog::mmIsRecordMatches(const Model_Checking::Data& tr
         for (const auto& split : it->second)
         {
             // Need to check if the split matches using the transaction Notes & Tags as well
-            Model_Checking::Data splitWithTxnNotes = tran;
+            Model_Checking::Data splitWithTxnNotes(tran);
             splitWithTxnNotes.CATEGID = split.CATEGID;
             splitWithTxnNotes.TRANSAMOUNT = split.SPLITTRANSAMOUNT;
             Model_Checking::Data splitWithSplitNotes = splitWithTxnNotes;
@@ -1840,7 +1841,7 @@ const wxString mmFilterTransactionsDialog::mmGetJsonSetings(bool i18n) const
     // Status
     if (statusCheckBox_->IsChecked())
     {
-        wxArrayString s = Model_Checking::all_status();
+        wxArrayString s = Model_Checking::STATUS_STR;
         s.Add(wxTRANSLATE("All Except Reconciled"));
         int item = choiceStatus_->GetSelection();
         wxString status;
@@ -2212,12 +2213,12 @@ void mmFilterTransactionsDialog::mmDoSaveSettings(bool is_user_request)
             StringBuffer buffer;
             Writer<StringBuffer> writer(buffer);
             j_doc.Accept(writer);
-            Model_Infotable::instance().Set(m_filter_key + "_LAST_USED", wxString(buffer.GetString()));
+            Model_Infotable::instance().Set(m_filter_key + "_LAST_USED", wxString::FromUTF8(buffer.GetString()));
             // Update the settings list with the new data
             mmDoInitSettingNameChoice();
         }
     }
-    Model_Infotable::instance().Set("TRANSACTION_FILTER_LAST_USED", m_settings_json);
+    Model_Infotable::instance().Set("TRANSACTIONS_FILTER_LAST_USED", m_settings_json);
 }
 
 void mmFilterTransactionsDialog::OnSaveSettings(wxCommandEvent& WXUNUSED(event))

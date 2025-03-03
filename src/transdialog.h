@@ -49,7 +49,7 @@ public:
         , int transaction_id
         , double current_balance
         , bool duplicate = false
-        , int type = Model_Checking::WITHDRAWAL);
+        , int type = Model_Checking::TYPE_ID_WITHDRAWAL);
 
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
@@ -88,6 +88,7 @@ private:
     void OnFocusChange(wxChildFocusEvent& event);
     void OnTextEntered(wxCommandEvent& event);
     void OnAdvanceChecked(wxCommandEvent& event);
+    void OnCalculator(wxCommandEvent& event);
     void SetTooltips();
     void SetCategoryForPayee(const Model_Payee::Data *payee = nullptr);
 private:
@@ -113,15 +114,18 @@ private:
     wxChoice* transaction_type_ = nullptr;
     mmDatePickerCtrl* dpc_ = nullptr;
     mmTagTextCtrl* tagTextCtrl_ = nullptr;
+    wxButton* bCalc_ = nullptr;
+    mmCalculatorPopup* calcPopup_ = nullptr;
+    mmTextCtrl* calcTarget_ = nullptr;
 
     bool m_transfer = false;
     bool m_new_trx = false;
     bool m_duplicate = false;
     bool m_advanced = false;
-    double m_current_balance;
+    double m_current_balance = false;
 
-    int object_in_focus_;
-    int m_account_id;
+    int object_in_focus_ = wxID_ANY;
+    int m_account_id = -1;
     wxString m_status;
 
     DB_Table_CHECKINGACCOUNT_V1::Data m_trx_data;
