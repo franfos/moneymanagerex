@@ -404,7 +404,7 @@ const wxString htmlWidgetIncomeVsExpenses::getHTMLText()
         if (pBankTransaction.TOACCOUNTID > 0)
         {
           Model_Account::Data *accountTo = Model_Account::instance().get(pBankTransaction.TOACCOUNTID);
-          if (Model_Account::type(accountTo) == Model_Account::TERM)
+          if (Model_Account::type_id(accountTo) == Model_Account::TYPE_ID_TERM)
           {
             if (Model_Checking::type_id(pBankTransaction) == Model_Checking::TYPE_ID_DEPOSIT)
                 incomeExpensesStats[idx].first += pBankTransaction.TRANSAMOUNT * convRate;
@@ -414,7 +414,7 @@ const wxString htmlWidgetIncomeVsExpenses::getHTMLText()
         }
         else
         {
-          if (Model_Checking::type(pBankTransaction) == Model_Checking::TYPE_ID_DEPOSIT)
+          if (Model_Checking::type_id(pBankTransaction) == Model_Checking::TYPE_ID_DEPOSIT)
               incomeExpensesStats[idx].first += pBankTransaction.TRANSAMOUNT * convRate;
           else
               incomeExpensesStats[idx].second += pBankTransaction.TRANSAMOUNT * convRate;
