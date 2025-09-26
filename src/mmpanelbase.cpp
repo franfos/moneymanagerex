@@ -124,7 +124,7 @@ void mmListCtrl::CreateColumns()
     std::vector<PANEL_COLUMN> sortedColumns = {};
     for (unsigned int i = 0; i < columnOrder.size(); i++)
     {
-        int index = std::find(m_real_columns.begin(), m_real_columns.end(), columnOrder[i]) - m_real_columns.begin();
+        unsigned int index = std::find(m_real_columns.begin(), m_real_columns.end(), columnOrder[i]) - m_real_columns.begin();
         if (index < m_columns.size())
             sortedColumns.push_back(m_columns[index]);
     }
@@ -261,7 +261,7 @@ void mmListCtrl::OnHeaderMove(wxCommandEvent& WXUNUSED(event), int direction)
     // find the next visible column
     int distance = direction;
     while (m_ColumnHeaderNbr + distance > 0
-        && m_ColumnHeaderNbr + distance < m_columns.size() - 1
+        && m_ColumnHeaderNbr + distance < static_cast<int>(m_columns.size()) - 1
         && GetColumnWidth(m_ColumnHeaderNbr + distance) == 0)
     {
         distance += direction;
@@ -368,7 +368,8 @@ std::vector<int> mmListCtrl::GetColumnOrder()
     std::vector<int> columnOrder;
     for (const auto& col_enum : columnStringList)
     {
-        columnOrder.push_back(std::atoi(col_enum.c_str()));
+        if (std::find(m_real_columns.begin(), m_real_columns.end(), wxAtoi(col_enum)) != m_real_columns.end())
+            columnOrder.push_back(wxAtoi(col_enum));
     }
 
     // add missing column enums

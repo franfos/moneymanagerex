@@ -82,6 +82,7 @@ namespace weblink
     extern const wxString Slack;
     extern const wxString SquareCashGuan;
     extern const wxString DefStockUrl;
+    extern const wxString AppleAppStore;
     extern const wxString GooglePlay;
     extern const wxString WebApp;
     extern const wxString Chiark;
@@ -92,21 +93,6 @@ namespace weblink
     extern const wxString CoinCapHistory;
 } // namespace weblink
 } // namespace mmex
-
-extern const wxString VIEW_TRANS_FILTER_DIALOG_STR;
-extern const wxString VIEW_TRANS_ALL_STR;
-extern const wxString VIEW_TRANS_TODAY_STR;
-extern const wxString VIEW_TRANS_CURRENT_MONTH_STR;
-extern const wxString VIEW_TRANS_LAST_30_DAYS_STR;
-extern const wxString VIEW_TRANS_LAST_90_DAYS_STR;
-extern const wxString VIEW_TRANS_LAST_MONTH_STR;
-extern const wxString VIEW_TRANS_LAST_3MONTHS_STR;
-extern const wxString VIEW_TRANS_LAST_12MONTHS_STR;
-extern const wxString VIEW_TRANS_CURRENT_YEAR_STR;
-extern const wxString VIEW_TRANS_CRRNT_FIN_YEAR_STR;
-extern const wxString VIEW_TRANS_LAST_YEAR_STR;
-extern const wxString VIEW_TRANS_LAST_FIN_YEAR_STR;
-extern const wxString VIEW_TRANS_SINCE_STATEMENT_STR;
 
 extern const wxString VIEW_ACCOUNTS_ALL_STR;
 extern const wxString VIEW_ACCOUNTS_OPEN_STR;
@@ -139,6 +125,8 @@ extern const wxString ATTACHMENTS_FOLDER_APPDATA;
 
 extern const wxString INIDB_NEWS_LAST_READ_DATE;
 
+extern const wxDateTime DATE_MAX;
+
 extern const wxArrayString g_locales();
 extern const wxString g_fiat_curr();
 
@@ -154,8 +142,6 @@ enum id
     mmID_CATEGORY,
     mmID_PAYEE,
     mmID_SPLIT,
-    mmID_ALLTRANSACTIONS,
-    mmID_DELETEDTRANSACTIONS,
     mmID_BROWSER,
     mmID_REMOVE,
     mmID_COLOR,

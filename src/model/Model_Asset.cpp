@@ -85,7 +85,7 @@ Model_Asset& Model_Asset::instance()
     return Singleton<Model_Asset>::instance();
 }
 
-wxString Model_Asset::get_asset_name(int asset_id)
+wxString Model_Asset::get_asset_name(int64 asset_id)
 {
     Data* asset = instance().get(asset_id);
     if (asset)
@@ -235,7 +235,10 @@ double Model_Asset::valueAtDate(const Data* r, const wxDate date)
 {
     double balance = 0;
     if (date >= STARTDATE(r)) {
-        Model_Translink::Data_Set translink_records = Model_Translink::instance().find(Model_Translink::LINKRECORDID(r->ASSETID), Model_Translink::LINKTYPE(Model_Attachment::reftype_desc(Model_Attachment::ASSET)));
+        Model_Translink::Data_Set translink_records = Model_Translink::instance().find(
+            Model_Translink::LINKRECORDID(r->ASSETID),
+            Model_Translink::LINKTYPE(Model_Attachment::REFTYPE_STR_ASSET)
+        );
         if (!translink_records.empty())
         {
             for (const auto& link : translink_records)
@@ -244,7 +247,7 @@ double Model_Asset::valueAtDate(const Data* r, const wxDate date)
                 const wxDate tranDate = Model_Checking::TRANSDATE(tran);
                 if (tranDate <= date)
                 {
-                    double amount = -1 * Model_Checking::balance(tran, tran->ACCOUNTID) *
+                    double amount = -1 * Model_Checking::account_flow(tran, tran->ACCOUNTID) *
                         Model_CurrencyHistory::getDayRate(Model_Account::instance().get(tran->ACCOUNTID)->CURRENCYID, tranDate);
                     wxTimeSpan diff_time = date - tranDate;
                     double diff_time_in_days = static_cast<double>(diff_time.GetDays());

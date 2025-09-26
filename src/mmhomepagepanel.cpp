@@ -246,24 +246,24 @@ void mmHomePagePanel::OnNewWindow(wxWebViewEvent& evt)
     }
     else if (uri.StartsWith("acct:", &sData))
     {
-        long id = -1;
-        sData.ToLong(&id);
+        wxLongLong_t id = -1;
+        sData.ToLongLong(&id);
         const Model_Account::Data* account = Model_Account::instance().get(id);
         if (account) {
-            m_frame->setGotoAccountID(id);
-            m_frame->setAccountNavTreeSection(account->ACCOUNTNAME);
+            m_frame->setGotoAccountID(account->id());
+            m_frame->setNavTreeAccount(account->ACCOUNTNAME);
             wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, MENU_GOTOACCOUNT);
             m_frame->GetEventHandler()->AddPendingEvent(event);
         }
     }
     else if (uri.StartsWith("stock:", &sData))
     {
-        long id = -1;
-        sData.ToLong(&id);
+        wxLongLong_t id = -1;
+        sData.ToLongLong(&id);
         const Model_Account::Data* account = Model_Account::instance().get(id);
         if (account) {
-            m_frame->setGotoAccountID(id);
-            m_frame->setAccountNavTreeSection(account->ACCOUNTNAME);
+            m_frame->setGotoAccountID(account->id());
+            m_frame->setNavTreeAccount(account->ACCOUNTNAME);
             wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, MENU_STOCKS);
             m_frame->GetEventHandler()->AddPendingEvent(event);
         }

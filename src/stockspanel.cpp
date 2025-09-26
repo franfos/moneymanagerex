@@ -43,7 +43,7 @@ BEGIN_EVENT_TABLE(mmStocksPanel, wxPanel)
     EVT_BUTTON(wxID_REFRESH,      mmStocksPanel::OnRefreshQuotes)
 END_EVENT_TABLE()
 /*******************************************************/
-mmStocksPanel::mmStocksPanel(int accountID
+mmStocksPanel::mmStocksPanel(int64 accountID
     , mmGUIFrame* frame
     , wxWindow *parent
     , wxWindowID winid)    
@@ -216,7 +216,7 @@ void mmStocksPanel::ViewStockTransactions(int selectedIndex)
     stockTxnListCtrl->AppendColumn(_("Commission"), wxLIST_FORMAT_RIGHT);
     topsizer->Add(stockTxnListCtrl, wxSizerFlags(g_flagsExpand).TripleBorder());
 
-    const Model_Translink::Data_Set stock_list = Model_Translink::TranslinkList(Model_Attachment::STOCK, stock->STOCKID);
+    const Model_Translink::Data_Set stock_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, stock->STOCKID);
     Model_Checking::Data_Set checking_list;
     for (const auto &trans : stock_list)
     {
@@ -232,8 +232,8 @@ void mmStocksPanel::ViewStockTransactions(int selectedIndex)
         Model_Shareinfo::Data* share_entry = Model_Shareinfo::ShareEntry(stock_trans.TRANSID);
         if (share_entry && ((share_entry->SHARENUMBER > 0) || (share_entry->SHAREPRICE > 0)))
         {
-            stockTxnListCtrl->SetItemData(index, stock_trans.TRANSID);
-            stockTxnListCtrl->SetItem(index, 0, mmGetDateForDisplay(stock_trans.TRANSDATE));
+            stockTxnListCtrl->SetItemData(index, stock_trans.TRANSID.GetValue());
+            stockTxnListCtrl->SetItem(index, 0, mmGetDateTimeForDisplay(stock_trans.TRANSDATE));
             stockTxnListCtrl->SetItem(index, 1, share_entry->SHARELOT);
 
             int precision = share_entry->SHARENUMBER == floor(share_entry->SHARENUMBER) ? 0 : Option::instance().SharePrecision();
@@ -254,7 +254,7 @@ void mmStocksPanel::ViewStockTransactions(int selectedIndex)
 
         // Update the item fields in case something changed
         Model_Shareinfo::Data* share_entry = Model_Shareinfo::ShareEntry(txn->TRANSID);
-        stockTxnListCtrl->SetItem(index, 0, mmGetDateForDisplay(txn->TRANSDATE));
+        stockTxnListCtrl->SetItem(index, 0, mmGetDateTimeForDisplay(txn->TRANSDATE));
         stockTxnListCtrl->SetItem(index, 1, share_entry->SHARELOT);
 
         int precision = share_entry->SHARENUMBER == floor(share_entry->SHARENUMBER) ? 0 : Option::instance().SharePrecision();
@@ -429,7 +429,7 @@ bool mmStocksPanel::onlineQuoteRefresh(wxString& msg)
     wxString base_currency_symbol;
     if (!Model_Currency::GetBaseCurrencySymbol(base_currency_symbol))
     {
-        msg = _("Could not find base currency symbol!");
+        msg = _("Unable to find base currency symbol!");
         return false;
     }
 
@@ -449,7 +449,7 @@ bool mmStocksPanel::onlineQuoteRefresh(wxString& msg)
     }
 
     refresh_button_->SetBitmapLabel(mmBitmapBundle(png::LED_YELLOW, mmBitmapButtonSize));
-    stock_details_->SetLabelText(_("Connecting..."));
+    stock_details_->SetLabelText(_u("Connecting…"));
 
     std::map<wxString, double > stocks_data;
     bool ok = get_yahoo_prices(symbols, stocks_data, base_currency_symbol, msg, yahoo_price_type::SHARES);
@@ -494,7 +494,7 @@ bool mmStocksPanel::onlineQuoteRefresh(wxString& msg)
     StocksRefreshStatus_ = true;
 
     strLastUpdate_.Printf(_("%1$s on %2$s"), LastRefreshDT_.FormatTime()
-        , mmGetDateForDisplay(LastRefreshDT_.FormatISODate()));
+        , mmGetDateTimeForDisplay(LastRefreshDT_.FormatISODate()));
     Model_Infotable::instance().Set("STOCKS_LAST_REFRESH_DATETIME", strLastUpdate_);
 
     return true;
@@ -607,7 +607,7 @@ void mmStocksPanel::call_dialog(int selectedIndex)
     listCtrlAccount_->doRefreshItems(dlg.m_stock_id);
 }
 
-void mmStocksPanel::DisplayAccountDetails(int accountID)
+void mmStocksPanel::DisplayAccountDetails(int64 accountID)
 {
 
     m_account_id = accountID;
@@ -623,7 +623,7 @@ void mmStocksPanel::DisplayAccountDetails(int accountID)
 
 void mmStocksPanel::RefreshList()
 {
-    int selected_id = -1;
+    int64 selected_id = -1;
     if (listCtrlAccount_->get_selectedIndex() > -1)
         selected_id = listCtrlAccount_->m_stocks[listCtrlAccount_->get_selectedIndex()].STOCKID;
     listCtrlAccount_->doRefreshItems(selected_id);

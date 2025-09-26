@@ -41,8 +41,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <wx/regex.h>
 #include <wx/valnum.h>
 
-constexpr auto DATE_MAX = 253402214400 /* Dec 31, 9999 */;
-
 static const wxString COLUMN_NAMES[] = { "ID", "Color", "Date", "Number", "Account", "Payee", "Status", "Category", "Type", "Amount",
                                          "Notes", "UDFC01", "UDFC02", "UDFC03", "UDFC04", "UDFC05", "Tags", "FX Rate", "Time" };
 
@@ -87,7 +85,7 @@ mmFilterTransactionsDialog::~mmFilterTransactionsDialog()
         Model_Infotable::instance().Set("TRANSACTION_FILTER_SIZE", GetSize());
 }
 
-mmFilterTransactionsDialog::mmFilterTransactionsDialog(wxWindow* parent, int accountID, bool isReport, wxString selected)
+mmFilterTransactionsDialog::mmFilterTransactionsDialog(wxWindow* parent, int64 accountID, bool isReport, wxString selected)
     : isMultiAccount_(accountID == -1), accountID_(accountID), isReportMode_(isReport),
       m_filter_key(isReport ? "TRANSACTIONS_FILTER" : "ALL_TRANSACTIONS_FILTER")
 {
@@ -196,7 +194,7 @@ void mmFilterTransactionsDialog::mmDoDataToControls(const wxString& json)
                 accountCheckBox_->SetValue(true);
                 for (const auto& a : Model_Account::instance().find(Model_Account::ACCOUNTNAME(acc_name)))
                 {
-                    m_selected_accounts_id.Add(a.ACCOUNTID);
+                    m_selected_accounts_id.push_back(a.ACCOUNTID);
                     baloon += (baloon.empty() ? "" : "\n") + a.ACCOUNTNAME;
                 }
             }
@@ -210,7 +208,7 @@ void mmFilterTransactionsDialog::mmDoDataToControls(const wxString& json)
         }
 
         // If no accounts are explicitly selected, turn off the Account filter and set selection to "All"
-        if (m_selected_accounts_id.GetCount() == 0)
+        if (m_selected_accounts_id.empty())
         {
             bSelectedAccounts_->SetLabelText(_("All"));
             accountCheckBox_->SetValue(false);
@@ -365,10 +363,10 @@ void mmFilterTransactionsDialog::mmDoDataToControls(const wxString& json)
     {
         for (rapidjson::SizeType i = 0; i < j_tags.Size(); i++)
         {
-            if (j_tags[i].IsInt())
+            if (j_tags[i].IsInt64())
             {
                 // Retrieve TAGNAME from TAGID
-                Model_Tag::Data* tag = Model_Tag::instance().get(j_tags[i].GetInt());
+                Model_Tag::Data* tag = Model_Tag::instance().get(int64(j_tags[i].GetInt64()));
                 if (tag)
                 {
                     s_tag.Append(tag->TAGNAME + " ");
@@ -416,10 +414,10 @@ void mmFilterTransactionsDialog::mmDoDataToControls(const wxString& json)
 
     // Custom Fields
     bool is_custom_found = false;
-    const wxString RefType = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION);
+    const wxString RefType = Model_Attachment::REFTYPE_STR_TRANSACTION;
     for (const auto& i : Model_CustomField::instance().find(Model_CustomField::DB_Table_CUSTOMFIELD_V1::REFTYPE(RefType)))
     {
-        const auto entry = wxString::Format("CUSTOM%i", i.FIELDID);
+        const auto entry = wxString::Format("CUSTOM%lld", i.FIELDID);
         if (j_doc.HasMember(entry.c_str()))
         {
             const auto value = j_doc[const_cast<char*>(static_cast<const char*>(entry.mb_str()))].GetString();
@@ -1044,7 +1042,7 @@ bool mmFilterTransactionsDialog::mmIsValuesCorrect() const
             mmErrorDialogs::ToolTip4Object(tagTextCtrl_, _("Invalid value"), _("Tags"), wxICON_ERROR);
             return false;
         }
-        else if (tagTextCtrl_->GetTagIDs().IsEmpty())
+        else if (tagTextCtrl_->GetTagIDs().empty())
         {
             mmErrorDialogs::ToolTip4Object(tagTextCtrl_, _("Empty value"), _("Tags"), wxICON_ERROR);
             return false;
@@ -1196,14 +1194,14 @@ void mmFilterTransactionsDialog::OnShowColumnsButton(wxCommandEvent& /*event*/)
         }
     }
 
-    if (m_selected_columns_id.GetCount() == 0 ||
-        (!useDateTime && m_selected_columns_id.GetCount() == 1 && m_selected_columns_id[0] == COL_TIME))
+    if (m_selected_columns_id.empty() ||
+        (!useDateTime && m_selected_columns_id.size() == 1 && m_selected_columns_id[0] == COL_TIME))
     {
         bHideColumns_->SetLabelText("");
         showColumnsCheckBox_->SetValue(false);
         bHideColumns_->Disable();
     }
-    else if (m_selected_columns_id.GetCount() > 0)
+    else if (! m_selected_columns_id.empty())
     {
         bHideColumns_->SetLabelText("...");
         mmToolTip(bHideColumns_, baloon);
@@ -1241,16 +1239,16 @@ bool mmFilterTransactionsDialog::mmIsStatusMatches(const wxString& itemStatus) c
     return false;
 }
 
-bool mmFilterTransactionsDialog::mmIsTypeMaches(const wxString& typeState, int accountid, int toaccountid) const
+bool mmFilterTransactionsDialog::mmIsTypeMaches(const wxString& typeState, int64 accountid, int64 toaccountid) const
 {
     bool result = false;
     if (typeState == Model_Checking::TYPE_STR_TRANSFER && cbTypeTransferTo_->GetValue() &&
-        (!mmIsAccountChecked() || (m_selected_accounts_id.Index(accountid) != wxNOT_FOUND)))
+        (!mmIsAccountChecked() || std::find(m_selected_accounts_id.begin(), m_selected_accounts_id.end(), accountid) != m_selected_accounts_id.end()))
     {
         result = true;
     }
     else if (typeState == Model_Checking::TYPE_STR_TRANSFER && cbTypeTransferFrom_->GetValue() &&
-             (!mmIsAccountChecked() || (m_selected_accounts_id.Index(toaccountid) != wxNOT_FOUND)))
+             (!mmIsAccountChecked() || std::find(m_selected_accounts_id.begin(), m_selected_accounts_id.end(), toaccountid) != m_selected_accounts_id.end()))
     {
         result = true;
     }
@@ -1316,7 +1314,7 @@ void mmFilterTransactionsDialog::OnButtonClearClick(wxCommandEvent& /*event*/)
     }
 }
 
-bool mmFilterTransactionsDialog::mmIsPayeeMatches(int payeeID)
+bool mmFilterTransactionsDialog::mmIsPayeeMatches(int64 payeeID)
 {
     const Model_Payee::Data* payee = Model_Payee::instance().get(payeeID);
     if (payee)
@@ -1351,23 +1349,23 @@ bool mmFilterTransactionsDialog::mmIsNoteMatches(const wxString& note)
         return note.IsEmpty();
 }
 
-bool mmFilterTransactionsDialog::mmIsCategoryMatches(int categid)
+bool mmFilterTransactionsDialog::mmIsCategoryMatches(int64 categid)
 {
-    return m_selected_categories_id.Index(categid) != wxNOT_FOUND;
+    return std::find(m_selected_categories_id.begin(), m_selected_categories_id.end(), categid) != m_selected_categories_id.end();
 }
 
-bool mmFilterTransactionsDialog::mmIsTagMatches(const wxString& refType, int refId, bool mergeSplitTags)
+bool mmFilterTransactionsDialog::mmIsTagMatches(const wxString& refType, int64 refId, bool mergeSplitTags)
 {
-    std::map<wxString, int> tagnames = Model_Taglink::instance().get(refType, refId);
+    std::map<wxString, int64> tagnames = Model_Taglink::instance().get(refType, refId);
 
     // If we have a split, merge the transaciton tags so that an AND condition captures cases
     // where one tag is on the base txn and the other is on the split
-    std::map<wxString, int> txnTagnames;
-    if (refType == Model_Attachment::reftype_desc(Model_Attachment::TRANSACTIONSPLIT))
-        txnTagnames = Model_Taglink::instance().get(Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION),
+    std::map<wxString, int64> txnTagnames;
+    if (refType == Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT)
+        txnTagnames = Model_Taglink::instance().get(Model_Attachment::REFTYPE_STR_TRANSACTION,
                                                     Model_Splittransaction::instance().get(refId)->TRANSID);
-    else if (refType == Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSITSPLIT))
-        txnTagnames = Model_Taglink::instance().get(Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT),
+    else if (refType == Model_Attachment::REFTYPE_STR_BILLSDEPOSITSPLIT)
+        txnTagnames = Model_Taglink::instance().get(Model_Attachment::REFTYPE_STR_BILLSDEPOSIT,
                                                     Model_Budgetsplittransaction::instance().get(refId)->TRANSID);
 
     if (mergeSplitTags)
@@ -1375,23 +1373,23 @@ bool mmFilterTransactionsDialog::mmIsTagMatches(const wxString& refType, int ref
         // Merge transaction tags and split tags. This is necessary when checking
         // if a split record matches the filter since we are using mmIsRecordMatches
         // to validate the split which gives it the wrong refType & refId
-        if (refType == Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION))
+        if (refType == Model_Attachment::REFTYPE_STR_TRANSACTION)
         {
             // Loop through checking splits and merge tags for each SPLITTRANSID
             for (const auto& split : Model_Splittransaction::instance().find(Model_Splittransaction::TRANSID(refId)))
             {
-                std::map<wxString, int> splitTagnames =
-                    Model_Taglink::instance().get(Model_Attachment::reftype_desc(Model_Attachment::TRANSACTIONSPLIT), split.SPLITTRANSID);
+                std::map<wxString, int64> splitTagnames =
+                    Model_Taglink::instance().get(Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT, split.SPLITTRANSID);
                 txnTagnames.insert(splitTagnames.begin(), splitTagnames.end());
             }
         }
-        else if (refType == Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT))
+        else if (refType == Model_Attachment::REFTYPE_STR_BILLSDEPOSIT)
         {
             // Loop through scheduled txn splits and merge tags for each SPLITTRANSID
             for (const auto& split : Model_Budgetsplittransaction::instance().find(Model_Budgetsplittransaction::TRANSID(refId)))
             {
-                std::map<wxString, int> splitTagnames =
-                    Model_Taglink::instance().get(Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSITSPLIT), split.SPLITTRANSID);
+                std::map<wxString, int64> splitTagnames =
+                    Model_Taglink::instance().get(Model_Attachment::REFTYPE_STR_BILLSDEPOSITSPLIT, split.SPLITTRANSID);
                 txnTagnames.insert(splitTagnames.begin(), splitTagnames.end());
             }
         }
@@ -1426,7 +1424,7 @@ template <class MODEL, class DATA> bool mmFilterTransactionsDialog::mmIsRecordMa
     bool ok = true;
 
     // wxLogDebug("Check date? %i trx date:%s %s %s", getDateRangeCheckBox(), tran.TRANSDATE, getFromDateCtrl().GetDateOnly().FormatISODate(),
-    if (mmIsAccountChecked() && m_selected_accounts_id.Index(tran.ACCOUNTID) == wxNOT_FOUND && m_selected_accounts_id.Index(tran.TOACCOUNTID) == wxNOT_FOUND)
+    if (mmIsAccountChecked() && std::find(m_selected_accounts_id.begin(), m_selected_accounts_id.end(), tran.ACCOUNTID) == m_selected_accounts_id.end() && std::find(m_selected_accounts_id.begin(), m_selected_accounts_id.end(), tran.TOACCOUNTID) == m_selected_accounts_id.end())
         ok = false;
     else if ((mmIsDateRangeChecked() || mmIsRangeChecked()) && (tran.TRANSDATE < m_begin_date.Mid(0, tran.TRANSDATE.length()) || tran.TRANSDATE > m_end_date.Mid(0, tran.TRANSDATE.length())))
         ok = false;
@@ -1456,9 +1454,9 @@ template <class MODEL, class DATA> bool mmFilterTransactionsDialog::mmIsRecordMa
         wxString refType;
         // Check the Data type to determine the tag RefType
         if (typeid(tran).hash_code() == typeid(Model_Checking::Data).hash_code())
-            refType = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION);
+            refType = Model_Attachment::REFTYPE_STR_TRANSACTION;
         else if (typeid(tran).hash_code() == typeid(Model_Billsdeposits::Data).hash_code())
-            refType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT);
+            refType = Model_Attachment::REFTYPE_STR_BILLSDEPOSIT;
         if (!mmIsTagMatches(refType, tran.id(), mergeSplitTags))
             ok = false;
     }
@@ -1471,11 +1469,11 @@ template <class MODEL, class DATA> bool mmFilterTransactionsDialog::mmIsSplitRec
 
     if (typeid(split).hash_code() == typeid(Model_Splittransaction::Data).hash_code())
     {
-        refType = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTIONSPLIT);
+        refType = Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT;
     }
     else if (typeid(split).hash_code() == typeid(Model_Budgetsplittransaction::Data).hash_code())
     {
-        refType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSITSPLIT);
+        refType = Model_Attachment::REFTYPE_STR_BILLSDEPOSITSPLIT;
     }
 
     if (mmIsTagsChecked() && !mmIsTagMatches(refType, split.SPLITTRANSID))
@@ -1487,27 +1485,32 @@ template <class MODEL, class DATA> bool mmFilterTransactionsDialog::mmIsSplitRec
 template bool mmFilterTransactionsDialog::mmIsSplitRecordMatches<Model_Splittransaction>(const Model_Splittransaction::Data& split);
 template bool mmFilterTransactionsDialog::mmIsSplitRecordMatches<Model_Budgetsplittransaction>(const Model_Budgetsplittransaction::Data& split);
 
-int mmFilterTransactionsDialog::mmIsRecordMatches(const Model_Checking::Data& tran, const std::map<int, Model_Splittransaction::Data_Set>& splits)
+int mmFilterTransactionsDialog::mmIsRecordMatches(const Model_Checking::Data& tran, const Model_Splittransaction::Data_Set& splits)
 {
     int ok = mmIsRecordMatches<Model_Checking>(tran);
-    const auto& it = splits.find(tran.id());
-    if (it != splits.end())
+    for (const auto& split : splits)
     {
-        for (const auto& split : it->second)
-        {
-            // Need to check if the split matches using the transaction Notes & Tags as well
-            Model_Checking::Data splitWithTxnNotes(tran);
-            splitWithTxnNotes.CATEGID = split.CATEGID;
-            splitWithTxnNotes.TRANSAMOUNT = split.SPLITTRANSAMOUNT;
-            Model_Checking::Data splitWithSplitNotes = splitWithTxnNotes;
-            splitWithSplitNotes.NOTES = split.NOTES;
-            ok += (mmIsRecordMatches<Model_Checking>(splitWithSplitNotes, true) || mmIsRecordMatches<Model_Checking>(splitWithTxnNotes, true));
-        }
+        // Need to check if the split matches using the transaction Notes & Tags as well
+        Model_Checking::Data splitWithTxnNotes(tran);
+        splitWithTxnNotes.CATEGID = split.CATEGID;
+        splitWithTxnNotes.TRANSAMOUNT = split.SPLITTRANSAMOUNT;
+        Model_Checking::Data splitWithSplitNotes = splitWithTxnNotes;
+        splitWithSplitNotes.NOTES = split.NOTES;
+        ok += (mmIsRecordMatches<Model_Checking>(splitWithSplitNotes, true) || mmIsRecordMatches<Model_Checking>(splitWithTxnNotes, true));
     }
     return ok;
 }
 
-int mmFilterTransactionsDialog::mmIsRecordMatches(const Model_Billsdeposits::Data& tran, const std::map<int, Model_Budgetsplittransaction::Data_Set>& splits)
+int mmFilterTransactionsDialog::mmIsRecordMatches(const Model_Checking::Data& tran, const std::map<int64, Model_Splittransaction::Data_Set>& splits)
+{
+    const Model_Splittransaction::Data_Set* split = nullptr;
+    const auto& it = splits.find(tran.id());
+    if (it != splits.end())
+        split = &(it->second);
+    return mmIsRecordMatches(tran, *split);
+}
+
+int mmFilterTransactionsDialog::mmIsRecordMatches(const Model_Billsdeposits::Data& tran, const std::map<int64, Model_Budgetsplittransaction::Data_Set>& splits)
 {
     int ok = mmIsRecordMatches<Model_Billsdeposits>(tran);
     const auto& it = splits.find(tran.id());
@@ -1553,7 +1556,7 @@ const wxString mmFilterTransactionsDialog::mmGetDescriptionToolTip() const
             {
                 wxDateTime dt;
                 if (mmParseISODate(value, dt))
-                    value = mmGetDateForDisplay(value);
+                    value = mmGetDateTimeForDisplay(value);
             }
             else if (pattern_type.Matches(value))
             {
@@ -1590,7 +1593,7 @@ const wxString mmFilterTransactionsDialog::mmGetDescriptionToolTip() const
                 {
                     if (wxGetTranslation("Tags").IsSameAs(wxString::FromUTF8(itr->name.GetString())))
                     {
-                        value += (value.empty() ? "" : " ") + Model_Tag::instance().get(valArray[i].GetInt())->TAGNAME;
+                        value += (value.empty() ? "" : " ") + Model_Tag::instance().get(int64(valArray[i].GetInt64()))->TAGNAME;
                         // don't add a newline between tag operators
                         if (valArray.Size() > 1 && i < valArray.Size() - 2 && valArray[i + 1].GetType() == kStringType)
                             continue;
@@ -1654,7 +1657,7 @@ void mmFilterTransactionsDialog::mmGetDescription(mmHTMLBuilder& hb)
             {
                 wxDateTime dt;
                 if (mmParseISODate(value, dt))
-                    value = mmGetDateForDisplay(value);
+                    value = mmGetDateTimeForDisplay(value);
             }
             else if (pattern_type.Matches(value))
             {
@@ -1694,7 +1697,7 @@ void mmFilterTransactionsDialog::mmGetDescription(mmHTMLBuilder& hb)
                     // wxLogDebug("%s", wxString::FromUTF8(itr->name.GetString()));
                     if (wxGetTranslation("Tags").IsSameAs(name))
                     {
-                        temp += (temp.empty() ? "" : (appendOperator ? " & " : " ")) + Model_Tag::instance().get(a.GetInt())->TAGNAME;
+                        temp += (temp.empty() ? "" : (appendOperator ? " & " : " ")) + Model_Tag::instance().get(int64(a.GetInt()))->TAGNAME;
                         appendOperator = true;
                     }
                     else if (wxGetTranslation("Hide Columns").IsSameAs(name) &&
@@ -1821,7 +1824,7 @@ const wxString mmFilterTransactionsDialog::mmGetJsonSetings(bool i18n) const
         json_writer.Key((i18n ? _("Category") : "CATEGORY").utf8_str());
         if (categoryComboBox_->mmIsValid())
         {
-            int categ = categoryComboBox_->mmGetCategoryId();
+            int64 categ = categoryComboBox_->mmGetCategoryId();
             const auto& full_name = Model_Category::full_name(categ, ":");
             json_writer.String(full_name.utf8_str());
         }
@@ -1904,7 +1907,7 @@ const wxString mmFilterTransactionsDialog::mmGetJsonSetings(bool i18n) const
             if (tag == "&" || tag == "|")
                 json_writer.String(tag.utf8_str());
             else
-                json_writer.Int(Model_Tag::instance().get(tag)->TAGID);
+                json_writer.Int64(Model_Tag::instance().get(tag)->TAGID.GetValue());
         }
 
         json_writer.EndArray();
@@ -1934,7 +1937,7 @@ const wxString mmFilterTransactionsDialog::mmGetJsonSetings(bool i18n) const
             if (!i.second.empty())
             {
                 const auto field = Model_CustomField::instance().get(i.first);
-                json_writer.Key(wxString::Format("CUSTOM%i", field->FIELDID).utf8_str());
+                json_writer.Key(wxString::Format("CUSTOM%lld", field->FIELDID).utf8_str());
                 json_writer.String(i.second.utf8_str());
             }
         }
@@ -1999,10 +2002,10 @@ void mmFilterTransactionsDialog::OnCategoryChange(wxEvent& event)
             for (const auto& category : Model_Category::instance().all_categories())
                 if (pattern.Matches(category.first))
                 {
-                    m_selected_categories_id.Add(category.second);
+                    m_selected_categories_id.push_back(category.second);
                     if (mmIsCategorySubCatChecked())
                         for (const auto& subcat : Model_Category::instance().sub_tree(Model_Category::instance().get(category.second)))
-                            m_selected_categories_id.Add(subcat.CATEGID);
+                            m_selected_categories_id.push_back(subcat.CATEGID);
                 }
     }
     event.Skip();
@@ -2045,7 +2048,7 @@ bool mmFilterTransactionsDialog::mmIsCustomFieldChecked() const
     return (cf.size() > 0);
 }
 
-bool mmFilterTransactionsDialog::mmIsCustomFieldMatches(int transid) const
+bool mmFilterTransactionsDialog::mmIsCustomFieldMatches(int64 transid) const
 {
     const auto cf = m_custom_fields->GetActiveCustomFields();
     int matched = 0;
@@ -2120,7 +2123,7 @@ void mmFilterTransactionsDialog::mmDoUpdateSettings()
     }
     if (!isReportMode_)
     {
-        Model_Infotable::instance().Set(wxString::Format("CHECK_FILTER_ID_ADV_%d", accountID_), mmGetJsonSetings());
+        Model_Infotable::instance().Set(wxString::Format("CHECK_FILTER_ID_ADV_%lld", accountID_), mmGetJsonSetings());
     }
 }
 
@@ -2244,7 +2247,7 @@ void mmFilterTransactionsDialog::OnAccountsButton(wxCommandEvent& WXUNUSED(event
     }
     s_acc.SetSelections(selected_items);
 
-    m_selected_accounts_id.Clear();
+    m_selected_accounts_id.clear();
     bSelectedAccounts_->UnsetToolTip();
 
     if (s_acc.ShowModal() == wxID_OK)
@@ -2256,24 +2259,24 @@ void mmFilterTransactionsDialog::OnAccountsButton(wxCommandEvent& WXUNUSED(event
             const wxString accounts_name = m_accounts_name[index];
             const auto account = Model_Account::instance().get(accounts_name);
             if (account)
-                m_selected_accounts_id.Add(account->ACCOUNTID);
+                m_selected_accounts_id.push_back(account->ACCOUNTID);
             baloon += accounts_name + "\n";
         }
     }
 
-    if (m_selected_accounts_id.GetCount() == 0)
+    if (m_selected_accounts_id.empty())
     {
         bSelectedAccounts_->SetLabelText(_("All"));
         accountCheckBox_->SetValue(false);
         bSelectedAccounts_->Disable();
     }
-    else if (m_selected_accounts_id.GetCount() == 1)
+    else if (m_selected_accounts_id.size() == 1)
     {
         const Model_Account::Data* account = Model_Account::instance().get(*m_selected_accounts_id.begin());
         if (account)
             bSelectedAccounts_->SetLabelText(account->ACCOUNTNAME);
     }
-    else if (m_selected_accounts_id.GetCount() > 1)
+    else if (m_selected_accounts_id.size() > 1)
     {
         bSelectedAccounts_->SetLabelText("...");
         mmToolTip(bSelectedAccounts_, baloon);
@@ -2348,7 +2351,7 @@ void mmFilterTransactionsDialog::OnComboKey(wxKeyEvent& event)
                 dlg.ShowModal();
                 if (dlg.getRefreshRequested())
                     cbPayee_->mmDoReInitialize();
-                int payee_id = dlg.getPayeeId();
+                int64 payee_id = dlg.getPayeeId();
                 Model_Payee::Data* payee = Model_Payee::instance().get(payee_id);
                 if (payee)
                 {

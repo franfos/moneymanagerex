@@ -38,13 +38,14 @@ wxString JSON_Formated(rapidjson::Document& j_doc);
 struct ValuePair
 {
     wxString label;
-    double   amount;
+    double amount;
 };
+
 struct ValueTrio
 {
     wxString color;
     wxString label;
-    double   amount;
+    double amount;
 };
 
 struct WebsiteNews
@@ -58,19 +59,19 @@ struct WebsiteNews
 class mmListBoxItem: public wxClientData
 {
 public:
-    mmListBoxItem(int index, const wxString& name)
+    mmListBoxItem(int64 index, const wxString& name)
         : index_(index), name_(name)
     {}
 
-    int getIndex() const;
+    int64 getIndex() const;
     wxString getName() const;
 
 private:
-    int index_;
+    int64 index_;
     wxString name_;
 };
 
-inline int mmListBoxItem::getIndex() const { return index_; }
+inline int64 mmListBoxItem::getIndex() const { return index_; }
 inline wxString mmListBoxItem::getName() const { return name_; }
 
 //----------------------------------------------------------------------------
@@ -78,62 +79,61 @@ inline wxString mmListBoxItem::getName() const { return name_; }
 class mmTreeItemData : public wxTreeItemData
 {
 public:
-    mmTreeItemData(int type, int id);
-    mmTreeItemData(const wxString& data, mmPrintableBase* report);
-    mmTreeItemData(mmPrintableBase* report, const wxString& data);
-    mmTreeItemData(int type, const wxString& data);
-    
-    ~mmTreeItemData() {}
-
-    int getData() const;
-    const wxString getString() const;
-    mmPrintableBase* get_report() const;
-    bool isReadOnly() const;
-    int getType() const;
     enum {
         HOME_PAGE,
         HELP_PAGE_MAIN,
         HELP_PAGE_STOCKS,
         HELP_PAGE_GRM,
-        HELP_INVESTMENT,
         HELP_BUDGET,
         HELP_REPORT,
+        CHECKING,
         BUDGET,
-        ACCOUNT,
         STOCK,
         REPORT,
         GRM,
-        ALL_TRANSACTIONS,
-        FAVORITES,
         ASSETS,
         BILLS,
-        TRASH,
         FILTER,
         FILTER_REPORT,
-        MENU_ACCOUNT,
-        MENU_FAVORITES,
         MENU_REPORT,
         DO_NOTHING
     };
 
 private:
-    int id_ = -1;
     int type_;
+    int64 id_ = -1;
     wxString stringData_;
     wxSharedPtr<mmPrintableBase> report_;
+
+public:
+    mmTreeItemData(int type, int64 id);
+    mmTreeItemData(int type, const wxString& data);
+    mmTreeItemData(int type, int64 id, const wxString& data);
+    mmTreeItemData(const wxString& data, mmPrintableBase* report);
+    mmTreeItemData(mmPrintableBase* report, const wxString& data);
+    
+    ~mmTreeItemData() {}
+
+    int getType() const;
+    int64 getId() const;
+    const wxString getString() const;
+    mmPrintableBase* getReport() const;
+    bool isReadOnly() const;
 };
 
-inline int mmTreeItemData::getData() const { return id_; }
-inline const wxString mmTreeItemData::getString() const { return stringData_; }
-inline mmPrintableBase* mmTreeItemData::get_report() const { return report_.get(); }
 inline int mmTreeItemData::getType() const { return type_; }
+inline int64 mmTreeItemData::getId() const { return id_; }
+inline const wxString mmTreeItemData::getString() const { return stringData_; }
+inline mmPrintableBase* mmTreeItemData::getReport() const { return report_.get(); }
+
 inline bool operator==(const mmTreeItemData& lhs, const mmTreeItemData& rhs)
 {
-    return (lhs.getData() == rhs.getData() &&
-        lhs.getString() == rhs.getString() &&
-        lhs.getType() == rhs.getType());
+    return (
+        lhs.getType()   == rhs.getType() &&
+        lhs.getId()     == rhs.getId() &&
+        lhs.getString() == rhs.getString()
+    );
 };
-
 //----------------------------------------------------------------------------
 
 int CaseInsensitiveCmp(const wxString &s1, const wxString &s2);
@@ -165,7 +165,7 @@ public:
 
 bool getNewsRSS(std::vector<WebsiteNews>& WebsiteNewsList);
 enum yahoo_price_type { FIAT = 0, SHARES };
-bool getOnlineCurrencyRates(wxString& msg, const int curr_id = -1, const bool used_only = true);
+bool getOnlineCurrencyRates(wxString& msg, const int64 curr_id = -1, const bool used_only = true);
 bool get_yahoo_prices(std::map<wxString, double>& symbols
     , std::map<wxString, double>& out
     , const wxString& base_currency_symbol
@@ -198,8 +198,9 @@ static const wxString MONTHS[12] =
 const wxDateTime getUserDefinedFinancialYear(bool prevDayRequired = false);
 const std::map<wxString, wxString> &date_formats_regex();
 bool mmParseISODate(const wxString& in_str, wxDateTime& out_date);
-const wxString mmGetDateForDisplay(const wxString &iso_date, const wxString& dateFormat = Option::instance().getDateFormat());
-const wxString mmGetTimeForDisplay(const wxString& iso_date);
+const wxString mmGetDateTimeForDisplay(const wxString &datetime_iso, const wxString& format = Option::instance().getDateFormat());
+const wxString mmGetDateForDisplay(const wxString &datetime_iso, const wxString& format = Option::instance().getDateFormat());
+const wxString mmGetTimeForDisplay(const wxString& datetime_iso);
 bool mmParseDisplayStringToDate(wxDateTime& date, const wxString& sDate, const wxString& sDateMask);
 extern const std::vector<std::pair<wxString, wxString>> g_date_formats_map();
 extern const std::map<int, std::pair<wxConvAuto, wxString> > g_encoding;

@@ -64,10 +64,10 @@ Model_CustomField& Model_CustomField::instance()
 }
 
 ///** Return a dataset with fields linked to a specific object */
-//const Model_CustomField::Data_Set Model_CustomField::GetFields(Model_Attachment::REFTYPE RefType)
+//const Model_CustomField::Data_Set Model_CustomField::GetFields(Model_Attachment::REFTYPE_ID RefType)
 //{
 //    Data_Set fields;
-//    wxString reftype_desc = Model_Attachment::reftype_desc(RefType);
+//    wxString reftype_str = Model_Attachment::REFTYPE_STR[RefType];
 //    for (const auto & field : this->find(Model_CustomField::DB_Table_CUSTOMFIELD::REFTYPE(RefType)))
 //    {
 //        fields.push_back(field);
@@ -76,7 +76,7 @@ Model_CustomField& Model_CustomField::instance()
 //}
 
 /** Delete a field and all his data */
-bool Model_CustomField::Delete(const int& FieldID)
+bool Model_CustomField::Delete(const int64& FieldID)
 {
     this->Savepoint();
     for (const auto& r : Model_CustomFieldData::instance().find(Model_CustomFieldData::FIELDID(FieldID)))
@@ -132,7 +132,7 @@ const wxString Model_CustomField::getTooltip(const wxString& Properties)
 
 int Model_CustomField::getReference(const wxString& Properties)
 {
-    int ref_type_id = Model_Attachment::instance().all_type().Index(Properties);
+    int ref_type_id = Model_Attachment::REFTYPE_STR.Index(Properties);
     return ref_type_id;
 }
 
@@ -207,19 +207,19 @@ const wxString Model_CustomField::getUDFC(const wxString& Properties)
     return "";
 }
 
-const std::map<wxString, int> Model_CustomField::getMatrix(Model_Attachment::REFTYPE reftype)
+const std::map<wxString, int64> Model_CustomField::getMatrix(Model_Attachment::REFTYPE_ID reftype)
 {
-    std::map<wxString, int> m;
-    const wxString& reftype_desc = Model_Attachment::reftype_desc(reftype);
+    std::map<wxString, int64> m;
+    const wxString& reftype_str = Model_Attachment::REFTYPE_STR[reftype];
     for (const auto& entry : UDFC_FIELDS())
     {
         if (entry.empty()) continue;
-        m[entry] = getUDFCID(reftype_desc, entry);
+        m[entry] = getUDFCID(reftype_str, entry);
     }
     return m;
 }
 
-int Model_CustomField::getUDFCID(const wxString& ref_type, const wxString& name)
+int64 Model_CustomField::getUDFCID(const wxString& ref_type, const wxString& name)
 {
     Document json_doc;
     const auto& a = Model_CustomField::instance().find(REFTYPE(ref_type));
@@ -317,7 +317,7 @@ const wxArrayString Model_CustomField::UDFC_FIELDS()
 
 const wxArrayString Model_CustomField::getUDFCList(DB_Table_CUSTOMFIELD_V1::Data* r)
 {
-    const wxString& ref_type = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION);
+    const wxString& ref_type = Model_Attachment::REFTYPE_STR_TRANSACTION;
     const auto& a = Model_CustomField::instance().find(Model_CustomField::DB_Table_CUSTOMFIELD_V1::REFTYPE(ref_type));
 
     wxArrayString choices = UDFC_FIELDS();

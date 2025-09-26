@@ -158,7 +158,7 @@ void mmCurrencyDialog::fillControls()
                                 == m_currency->GROUP_SEPARATOR)
                 break;
         mctrl_groupSep->SetSelection(i);
-        m_scale = log10(m_currency->SCALE);
+        m_scale = log10(m_currency->SCALE.GetValue());
         mctrl_decimalSep->Enable(!m_locale_used && m_scale > 0); 
         mctrl_groupSep->Enable(!m_locale_used); 
         const wxString& scale_value = wxString::Format("%i", m_scale);
@@ -282,7 +282,7 @@ void mmCurrencyDialog::OnOk(wxCommandEvent& WXUNUSED(event))
     if (m_currency->SCALE > 1)
         if (m_currency->GROUP_SEPARATOR == m_currency->DECIMAL_POINT) {
             return mmErrorDialogs::ToolTip4Object(mctrl_groupSep, _("Invalid Entry")
-                        , _("Grouping character cannot be the same as the decimal character"));
+                        , _("Grouping character is unable to be the same as the decimal character"));
         }
 
     if (mctrl_baseConvRate->Calculate(SCALE))
@@ -307,7 +307,7 @@ void mmCurrencyDialog::OnDataChanged(wxCommandEvent& WXUNUSED(event))
 
     if ((scale > 0) && (grouping == decimal))
         mmErrorDialogs::ToolTip4Object(mctrl_groupSep, _("Invalid Entry")
-                , _("Grouping character cannot be the same as the decimal character"));
+                , _("Grouping character is unable to be the same as the decimal character"));
 
     mctrl_decimalSep->Enable(!m_locale_used && scale > 0); 
 

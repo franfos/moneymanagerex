@@ -30,6 +30,21 @@
 #include "model/Model_Currency.h"
 #include "model/Model_CurrencyHistory.h"
 
+const std::vector<std::pair<Option::COMPOUNDING_ID, wxString> > Option::COMPOUNDING_NAME =
+{
+    { Option::COMPOUNDING_ID_DAY,   wxString(wxTRANSLATE("Day")) },
+    { Option::COMPOUNDING_ID_WEEK,  wxString(wxTRANSLATE("Week")) },
+    { Option::COMPOUNDING_ID_MONTH, wxString(wxTRANSLATE("Month")) },
+    { Option::COMPOUNDING_ID_YEAR,  wxString(wxTRANSLATE("Year")) },
+};
+const std::vector<std::pair<Option::COMPOUNDING_ID, int> > Option::COMPOUNDING_N =
+{
+    { Option::COMPOUNDING_ID_DAY,   365 },
+    { Option::COMPOUNDING_ID_WEEK,  52 },
+    { Option::COMPOUNDING_ID_MONTH, 12 },
+    { Option::COMPOUNDING_ID_YEAR,  1 },
+};
+
 //----------------------------------------------------------------------------
 Option::Option()
 :   m_dateFormat(mmex::DEFDATEFORMAT)
@@ -51,7 +66,13 @@ void Option::LoadOptions(bool include_infotable)
         m_financialYearStartDayString = Model_Infotable::instance().GetStringInfo("FINANCIAL_YEAR_START_DAY", "1");
         m_financialYearStartMonthString = Model_Infotable::instance().GetStringInfo("FINANCIAL_YEAR_START_MONTH", "7");
         m_sharePrecision = Model_Infotable::instance().GetIntInfo("SHARE_PRECISION", 4);
-        m_baseCurrency = Model_Infotable::instance().GetIntInfo("BASECURRENCYID", -1);
+        wxString assetCompounding = Model_Infotable::instance().GetStringInfo("ASSET_COMPOUNDING", "Day");
+        m_assetCompounding = Option::COMPOUNDING_ID_DAY;
+        for (const auto& a : Option::COMPOUNDING_NAME) if (assetCompounding == a.second) {
+            m_assetCompounding = a.first;
+            break;
+        }
+        m_baseCurrency = Model_Infotable::instance().GetInt64Info("BASECURRENCYID", -1);
         m_currencyHistoryEnabled = Model_Infotable::instance().GetBoolInfo(INIDB_USE_CURRENCY_HISTORY, true);
         m_budget_days_offset = Model_Infotable::instance().GetIntInfo("BUDGET_DAYS_OFFSET", 0);
         m_reporting_firstday = Model_Infotable::instance().GetIntInfo("REPORTING_FIRSTDAY", 1);
@@ -169,13 +190,13 @@ void Option::FinancialYearStartMonth(const wxString& setting)
     Model_Infotable::instance().Set("FINANCIAL_YEAR_START_MONTH", setting);
 }
 
-void Option::setBaseCurrency(const int base_currency_id)
+void Option::setBaseCurrency(const int64 base_currency_id)
 {
     m_baseCurrency = base_currency_id;
     Model_Infotable::instance().Set("BASECURRENCYID", base_currency_id);
 }
 
-int Option::getBaseCurrencyID() const noexcept
+int64 Option::getBaseCurrencyID() const noexcept
 {
     return m_baseCurrency;
 }
@@ -373,6 +394,17 @@ int Option::SharePrecision() const noexcept
     return m_sharePrecision;
 }
 
+void Option::AssetCompounding(const int value)
+{
+    Model_Infotable::instance().Set("ASSET_COMPOUNDING", Option::COMPOUNDING_NAME[value].second);
+    m_assetCompounding = value;
+}
+
+int Option::AssetCompounding() const noexcept
+{
+    return m_assetCompounding;
+}
+
 void Option::SendUsageStatistics(const bool value)
 {
     m_usageStatistics = value;
@@ -461,7 +493,7 @@ void Option::setHomePageIncExpRange(const int value)
     m_homepage_incexp_range = value;
 }
 
-int Option::AccountImageId(const int account_id, const bool def, const bool ignoreClosure)
+int Option::AccountImageId(const int64 account_id, const bool def, const bool ignoreClosure)
 {
     wxString acctStatus = VIEW_ACCOUNTS_OPEN_STR;
     Model_Account::TYPE_ID acctType = Model_Account::TYPE_ID_CHECKING;
@@ -479,7 +511,7 @@ int Option::AccountImageId(const int account_id, const bool def, const bool igno
 
     int max = acc_img::MAX_ACC_ICON - img::LAST_NAVTREE_PNG;
     int min = 1;
-    int custom_img_id = Model_Infotable::instance().GetIntInfo(wxString::Format("ACC_IMAGE_ID_%i", account_id), 0);
+    int custom_img_id = Model_Infotable::instance().GetIntInfo(wxString::Format("ACC_IMAGE_ID_%lld", account_id), 0);
     if (custom_img_id > max) custom_img_id = custom_img_id - 20; //Bug #963 fix 
     if (!def && (custom_img_id >= min && custom_img_id <= max))
         return custom_img_id + img::LAST_NAVTREE_PNG - 1;

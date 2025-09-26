@@ -101,7 +101,7 @@ mmBDDialog::~mmBDDialog()
     Model_Infotable::instance().Set("RECURRINGTRANS_DIALOG_SIZE", size);
 }
 
-mmBDDialog::mmBDDialog(wxWindow* parent, int bdID, bool duplicate, bool enterOccur)
+mmBDDialog::mmBDDialog(wxWindow* parent, int64 bdID, bool duplicate, bool enterOccur)
     : m_dup_bill(duplicate)
     , m_enter_occur(enterOccur)
 {
@@ -129,32 +129,33 @@ mmBDDialog::mmBDDialog(wxWindow* parent, int bdID, bool duplicate, bool enterOcc
         m_bill_data.TRANSCODE = bill->TRANSCODE;
         m_bill_data.FOLLOWUPID = bill->FOLLOWUPID;
         m_bill_data.COLOR = bill->COLOR;
-        wxArrayInt billtags;
+        wxArrayInt64 billtags;
         for (const auto& tag : Model_Taglink::instance().find(
-            Model_Taglink::REFTYPE(Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT)),
-            Model_Taglink::REFID(bill->BDID)))
-            billtags.Add(tag.TAGID);
+            Model_Taglink::REFTYPE(Model_Attachment::REFTYPE_STR_BILLSDEPOSIT),
+            Model_Taglink::REFID(bill->BDID)
+        ))
+            billtags.push_back(tag.TAGID);
         m_bill_data.TAGS = billtags;
         //
-        const wxString& splitRefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSITSPLIT);
-        for (const auto& item : Model_Billsdeposits::splittransaction(bill)) {
-            wxArrayInt splittags;
+        const wxString& splitRefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSITSPLIT;
+        for (const auto& item : Model_Billsdeposits::split(bill)) {
+            wxArrayInt64 splittags;
             for (const auto& tag : Model_Taglink::instance().find(Model_Taglink::REFTYPE(splitRefType), Model_Taglink::REFID(item.SPLITTRANSID)))
-                splittags.Add(tag.TAGID);
+                splittags.push_back(tag.TAGID);
             m_bill_data.local_splits.push_back({ item.CATEGID, item.SPLITTRANSAMOUNT, splittags, item.NOTES });
         }
 
         // If duplicate then we may need to copy the attachments
         if (m_dup_bill && Model_Infotable::instance().GetBoolInfo("ATTACHMENTSDUPLICATE", false))
         {
-            const wxString& RefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT);
+            const wxString& RefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSIT;
             mmAttachmentManage::CloneAllAttachments(RefType, bdID, 0);
         }
     }
 
     m_transfer = (m_bill_data.TRANSCODE == Model_Checking::TYPE_STR_TRANSFER);
 
-    int ref_id = m_dup_bill ?  -bdID : (m_new_bill ? 0 : -m_bill_data.BDID);
+    int64 ref_id = m_dup_bill ?  -bdID : (m_new_bill ? 0 : -m_bill_data.BDID);
     m_custom_fields = new mmCustomDataTransaction(this, ref_id, ID_CUSTOMFIELDS);
 
     this->SetFont(parent->GetFont());
@@ -198,7 +199,7 @@ void mmBDDialog::dataToControls()
     wxButton* bFrequentUsedNotes = static_cast<wxButton*>(FindWindow(ID_DIALOG_TRANS_BUTTON_FREQENTNOTES));
     bFrequentUsedNotes->Enable(!frequentNotes_.empty());
 
-    bColours_->SetBackgroundColor(m_bill_data.COLOR);
+    bColours_->SetBackgroundColor(m_bill_data.COLOR.GetValue());
 
     for (const auto& entry : BILLSDEPOSITS_REPEATS)
     {
@@ -233,8 +234,8 @@ void mmBDDialog::dataToControls()
     m_date_due->SetValue(field_date);
 
     // demultiplex m_bill_data.REPEATS
-    int autoExecute = m_bill_data.REPEATS / BD_REPEATS_MULTIPLEX_BASE;
-    int repeats = m_bill_data.REPEATS % BD_REPEATS_MULTIPLEX_BASE;
+    int autoExecute = m_bill_data.REPEATS.GetValue() / BD_REPEATS_MULTIPLEX_BASE;
+    int repeats = m_bill_data.REPEATS.GetValue() % BD_REPEATS_MULTIPLEX_BASE;
 
     // fix repeats
     if (repeats < Model_Billsdeposits::REPEAT_ONCE || repeats > Model_Billsdeposits::REPEAT_MONTHLY_LAST_BUSINESS_DAY)
@@ -251,7 +252,7 @@ void mmBDDialog::dataToControls()
     setRepeatType(repeats);
 
     if (repeats != Model_Billsdeposits::REPEAT_ONCE && m_bill_data.NUMOCCURRENCES > 0) {
-        textNumRepeats_->SetValue(wxString::Format("%d", m_bill_data.NUMOCCURRENCES));
+        textNumRepeats_->SetValue(wxString::Format("%lld", m_bill_data.NUMOCCURRENCES));
     }
 
     if (autoExecute == Model_Billsdeposits::REPEAT_AUTO_SILENT)
@@ -328,10 +329,10 @@ void mmBDDialog::SetDialogHeader(const wxString& header)
     this->SetTitle(header);
 }
 
-void mmBDDialog::SetDialogParameters(int trx_id)
+void mmBDDialog::SetDialogParameters(int64 trx_id)
 {
     const auto split = Model_Splittransaction::instance().get_all();
-    const auto tags = Model_Taglink::instance().get_all(Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT));
+    const auto tags = Model_Taglink::instance().get_all(Model_Attachment::REFTYPE_STR_BILLSDEPOSIT);
     //const auto trx = Model_Checking::instance().find(Model_Checking::TRANSID(trx_id)).at(0);
     const auto trx = Model_Checking::instance().get(trx_id);
     Model_Checking::Full_Data t(*trx, split, tags);
@@ -679,8 +680,8 @@ void mmBDDialog::CreateControls()
 
 void mmBDDialog::OnQuit(wxCloseEvent& WXUNUSED(event))
 {
-    const wxString& RefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT);
-    if (!m_bill_data.BDID)
+    const wxString& RefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSIT;
+    if (m_bill_data.BDID != 0)
         mmAttachmentManage::DeleteAllAttachments(RefType, m_bill_data.BDID);
     EndModal(wxID_CANCEL);
 }
@@ -697,8 +698,8 @@ void mmBDDialog::OnCancel(wxCommandEvent& WXUNUSED(event))
     }
 #endif
 
-    const wxString& RefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT);
-    if (!m_bill_data.BDID)
+    const wxString& RefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSIT;
+    if (m_bill_data.BDID != 0)
         mmAttachmentManage::DeleteAllAttachments(RefType, m_bill_data.BDID);
     EndModal(wxID_CANCEL);
 }
@@ -722,7 +723,7 @@ void mmBDDialog::OnPayee(wxCommandEvent& WXUNUSED(event))
     }
 }
 
-void mmBDDialog::SetAmountCurrencies(int accountID, int toAccountID)
+void mmBDDialog::SetAmountCurrencies(int64 accountID, int64 toAccountID)
 {
     Model_Account::Data* account = Model_Account::instance().get(accountID);
     if (account)
@@ -760,7 +761,7 @@ void mmBDDialog::OnComboKey(wxKeyEvent& event)
                 dlg.ShowModal();
                 if (dlg.getRefreshRequested())
                     cbPayee_->mmDoReInitialize();
-                int payee_id = dlg.getPayeeId();
+                int64 payee_id = dlg.getPayeeId();
                 Model_Payee::Data* payee = Model_Payee::instance().get(payee_id);
                 if (payee) {
                     cbPayee_->ChangeValue(payee->PAYEENAME);
@@ -806,7 +807,7 @@ void mmBDDialog::OnComboKey(wxKeyEvent& event)
 
 void mmBDDialog::OnAttachments(wxCommandEvent& WXUNUSED(event))
 {
-    const wxString& RefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT);
+    const wxString& RefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSIT;
     mmAttachmentDialog dlg(this, RefType, m_bill_data.BDID);
     dlg.ShowModal();
 }
@@ -1013,7 +1014,7 @@ void mmBDDialog::OnOk(wxCommandEvent& WXUNUSED(event))
         long cnt = 0;
         if (numRepeatStr.ToLong(&cnt) && cnt > 0) {
             wxASSERT(cnt <= std::numeric_limits<int>::max());
-            m_bill_data.NUMOCCURRENCES = static_cast<int>(cnt);
+            m_bill_data.NUMOCCURRENCES = cnt;
         }
     }
 
@@ -1080,7 +1081,7 @@ void mmBDDialog::OnOk(wxCommandEvent& WXUNUSED(event))
         Model_Budgetsplittransaction::instance().update(splt, m_trans_id);
 
         // Save split tags
-        const wxString& splitRefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSITSPLIT);
+        const wxString& splitRefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSITSPLIT;
 
         for (size_t i = 0; i < m_bill_data.local_splits.size(); i++)
         {
@@ -1096,7 +1097,7 @@ void mmBDDialog::OnOk(wxCommandEvent& WXUNUSED(event))
             Model_Taglink::instance().update(splitTaglinks, splitRefType, splt.at(i).SPLITTRANSID);
         }
 
-        const wxString& RefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT);
+        const wxString& RefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSIT;
         mmAttachmentManage::RelocateAllAttachments(RefType, 0, RefType, m_trans_id);
 
         // Save base transaction tags
@@ -1144,7 +1145,7 @@ void mmBDDialog::OnOk(wxCommandEvent& WXUNUSED(event))
             tran->TOTRANSAMOUNT = m_bill_data.TOTRANSAMOUNT;
             tran->FOLLOWUPID = m_bill_data.FOLLOWUPID;
             tran->COLOR = m_bill_data.COLOR;
-            int trans_id = Model_Checking::instance().save(tran);
+            int64 trans_id = Model_Checking::instance().save(tran);
 
             Model_Splittransaction::Data_Set checking_splits;
             for (auto &item : m_bill_data.local_splits)
@@ -1159,7 +1160,7 @@ void mmBDDialog::OnOk(wxCommandEvent& WXUNUSED(event))
             Model_Splittransaction::instance().update(checking_splits, trans_id);
 
             // Save split tags
-            const wxString& splitRefType = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTIONSPLIT);
+            const wxString& splitRefType = Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT;
 
             for (size_t i = 0; i < m_bill_data.local_splits.size(); i++)
             {
@@ -1178,8 +1179,8 @@ void mmBDDialog::OnOk(wxCommandEvent& WXUNUSED(event))
             //Custom Data
             m_custom_fields->SaveCustomValues(trans_id);
 
-            const wxString& oldRefType = Model_Attachment::reftype_desc(Model_Attachment::BILLSDEPOSIT);
-            const wxString& newRefType = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION);
+            const wxString& oldRefType = Model_Attachment::REFTYPE_STR_BILLSDEPOSIT;
+            const wxString& newRefType = Model_Attachment::REFTYPE_STR_TRANSACTION;
             mmAttachmentManage::RelocateAllAttachments(oldRefType, m_bill_data.BDID, newRefType, trans_id);
 
             // Save base transaction tags
@@ -1471,7 +1472,7 @@ void mmBDDialog::setCategoryLabel()
 
         if (!transactions.empty())
         {
-            const int cat = transactions.back().CATEGID;
+            const int64 cat = transactions.back().CATEGID;
             cbCategory_->ChangeValue(Model_Category::full_name(cat));
         }
     } else
@@ -1514,7 +1515,7 @@ void mmBDDialog::OnMoreFields(wxCommandEvent& WXUNUSED(event))
 
 void mmBDDialog::OnAccountUpdated(wxCommandEvent& WXUNUSED(event))
 {
-    int acc_id = cbAccount_->mmGetId();
+    int64 acc_id = cbAccount_->mmGetId();
     Model_Account::Data* account = Model_Account::instance().get(acc_id);
     if (account)
     {

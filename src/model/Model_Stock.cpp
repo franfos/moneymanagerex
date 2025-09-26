@@ -46,7 +46,7 @@ Model_Stock& Model_Stock::instance(wxSQLite3Database* db)
     return ins;
 }
 
-wxString Model_Stock::get_stock_name(int stock_id)
+wxString Model_Stock::get_stock_name(int64 stock_id)
 {
     Data* stock = instance().get(stock_id);
     if (stock)
@@ -97,7 +97,7 @@ double Model_Stock::CurrentValue(const Data& r)
 * Remove the Data record from memory and the database.
 * Delete also all stock history
 */
-bool Model_Stock::remove(int id)
+bool Model_Stock::remove(int64 id)
 {
     Model_Stock::Data *data = this->get(id);
     const auto &stocks = Model_Stock::instance().find(Model_Stock::SYMBOL(data->SYMBOL));
@@ -133,7 +133,7 @@ Returns the total stock balance at a given date
 double Model_Stock::getDailyBalanceAt(const Model_Account::Data *account, const wxDate& date)
 {
     wxString strDate = date.FormatISODate();
-    std::map<int, double> totBalance;
+    std::map<int64, double> totBalance;
 
     Data_Set stocks = this->instance().find(HELDAT(account->id()));
     for (const auto & stock : stocks)
@@ -188,7 +188,7 @@ double Model_Stock::getDailyBalanceAt(const Model_Account::Data *account, const 
 
         double numShares = 0.0;
 
-        Model_Translink::Data_Set linkrecords = Model_Translink::TranslinkList(Model_Attachment::REFTYPE::STOCK, stock.STOCKID);
+        Model_Translink::Data_Set linkrecords = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, stock.STOCKID);
         for (const auto& linkrecord : linkrecords)
         {
             Model_Checking::Data* txn = Model_Checking::instance().get(linkrecord.CHECKINGACCOUNTID);
@@ -218,7 +218,7 @@ to base currency.
 double Model_Stock::RealGainLoss(const Data* r, bool to_base_curr)
 {
     Model_Currency::Data* currency = Model_Account::currency(Model_Account::instance().get(r->HELDAT));
-    Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE::STOCK, r->STOCKID);
+    Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, r->STOCKID);
     double real_gain_loss = 0;
     double total_shares = 0;
     double total_initial_value = 0;
@@ -289,7 +289,7 @@ double Model_Stock::UnrealGainLoss(const Data* r, bool to_base_curr)
     {
         Model_Currency::Data* currency = Model_Account::currency(Model_Account::instance().get(r->HELDAT));
         double conv_rate = Model_CurrencyHistory::getDayRate(currency->CURRENCYID);
-        Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE::STOCK, r->STOCKID);
+        Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, r->STOCKID);
         if (!trans_list.empty())
         {
             double total_shares = 0;

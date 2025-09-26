@@ -131,6 +131,7 @@ namespace tags
     static const wxString MONEY_CELL = "<td class='money'>";
     static const wxString TABLE_CELL_END = "</td>\n";
     static const wxString TABLE_CELL_LINK = R"(<a href="%s" target="_blank">%s</a>)";
+    static const wxString TABLE_CELL_LINK_COLOR = R"(<a style="color: %s;" href="%s" target="_blank">%s</a>)";
     static const wxString TABLE_HEADER = "<th%s>";
     static const wxString HEADER = "<h%i>%s</h%i>";
     static const wxString TABLE_HEADER_END = "</th>\n";
@@ -151,7 +152,7 @@ mmHTMLBuilder::mmHTMLBuilder()
 {
     today_.date = wxDateTime::Now();
     today_.todays_date = wxString::Format(_("Report Generated %1$s %2$s")
-        , mmGetDateForDisplay(today_.date.FormatISODate())
+        , mmGetDateTimeForDisplay(today_.date.FormatISODate())
         , today_.date.FormatISOTime());
 }
 
@@ -212,8 +213,8 @@ void mmHTMLBuilder::DisplayDateHeading(const wxDateTime& startDate, const wxDate
     wxString sDate;
     if (withDateRange && startDate.IsValid() && endDate.IsValid()) {
         sDate << wxString::Format(_("From %1$s till %2$s")
-            , mmGetDateForDisplay(startDate.FormatISODate())
-            , withNoEndDate ? _("Future") : mmGetDateForDisplay(endDate.FormatISODate()));
+            , mmGetDateTimeForDisplay(startDate.FormatISODate())
+            , withNoEndDate ? _("Future") : mmGetDateTimeForDisplay(endDate.FormatISODate()));
     }
     else if (!withDateRange) {
         sDate << _("Over Time");
@@ -376,7 +377,7 @@ void mmHTMLBuilder::addTableCellDate(const wxString& iso_date)
 {
     html_ += wxString::Format(tags::TABLE_CELL
         , wxString::Format(" class='text-left' sorttable_customkey = '%s' nowrap", iso_date));
-    html_ += mmGetDateForDisplay(iso_date);
+    html_ += mmGetDateTimeForDisplay(iso_date);
     this->endTableCell();
 }
 
@@ -409,6 +410,21 @@ const wxString mmHTMLBuilder::getColor(int i)
     std::vector<wxColour> colours = mmThemeMetaColourArray(meta::COLOR_REPORT_PALETTE);
     int c = i % colours.size();
     return colours.at(c).GetAsString(wxC2S_HTML_SYNTAX);
+}
+
+const wxString mmHTMLBuilder::getFormattedLink(const wxString& color, const wxString& href_value, const wxString& a_value)
+{
+    // Check if color is provided
+    if (color.IsEmpty())
+    {
+        // Use the standard link format
+        return wxString::Format(tags::TABLE_CELL_LINK, href_value, a_value);
+    }
+    else
+    {
+        // Use the color link format
+        return wxString::Format(tags::TABLE_CELL_LINK_COLOR, color, href_value, a_value);
+    }
 }
 
 const wxString mmHTMLBuilder::getRandomColor(bool positive)

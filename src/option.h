@@ -21,6 +21,8 @@
 
 #include "defs.h"
 
+typedef wxLongLong int64;
+
 /*
    mmOptions caches the options for MMEX
    so that we don't hit the DB that often
@@ -31,6 +33,15 @@ class Option
 public:
     enum USAGE_TYPE { NONE = 0, LASTUSED, UNUSED, DEFAULT };
     enum THEME_MODE { AUTO = 0, LIGHT, DARK };
+    enum COMPOUNDING_ID {
+        COMPOUNDING_ID_DAY = 0,
+        COMPOUNDING_ID_WEEK,
+        COMPOUNDING_ID_MONTH,
+        COMPOUNDING_ID_YEAR,
+        COMPOUNDING_ID_size
+    };
+    static const std::vector<std::pair<COMPOUNDING_ID, wxString> > COMPOUNDING_NAME;
+    static const std::vector<std::pair<COMPOUNDING_ID, int> > COMPOUNDING_N;
 
 public:
     Option();
@@ -64,9 +75,9 @@ public:
     const wxString& FinancialYearStartMonth() const;
 
     // set the base currency ID
-    void setBaseCurrency(const int base_currency_id);
+    void setBaseCurrency(const int64 base_currency_id);
     // returns the base currency ID
-    int getBaseCurrencyID() const noexcept;
+    int64 getBaseCurrencyID() const noexcept;
 
     // set and save the option: m_databaseUpdated
     void DatabaseUpdated(const bool value);
@@ -124,6 +135,9 @@ public:
     void SharePrecision(const int value);
     int SharePrecision() const noexcept;
 
+    void AssetCompounding(const int value);
+    int AssetCompounding() const noexcept;
+
     // Allows a year or financial year to start before or after the 1st of the month.
     void setBudgetDaysOffset(const int value);
     int getBudgetDaysOffset() const noexcept;
@@ -152,7 +166,7 @@ public:
     int getNavigationIconSize() const noexcept;
     int getToolbarIconSize() const noexcept;
 
-    int AccountImageId(const int account_id, const bool def, const bool ignoreClosure = false);
+    int AccountImageId(const int64 account_id, const bool def, const bool ignoreClosure = false);
     bool getSendUsageStatistics() const noexcept;
 
     void IgnoreFutureTransactions(const bool value);
@@ -178,7 +192,7 @@ private:
     wxString m_localeNameString;
     wxString m_financialYearStartDayString;
     wxString m_financialYearStartMonthString;
-    int m_baseCurrency = -1;
+    int64 m_baseCurrency = -1;
     bool m_currencyHistoryEnabled = false;
     bool m_bulk_enter = false;
 
@@ -203,6 +217,7 @@ private:
     bool m_usageStatistics = true;
     bool m_newsChecking = true;                    //INIDB_CHECK_NEWS
     int m_sharePrecision = 4;
+    int m_assetCompounding = Option::COMPOUNDING_ID_DAY;
 
     int m_theme_mode = Option::AUTO;
     int m_html_font_size = 100;

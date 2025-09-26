@@ -201,6 +201,17 @@ kolmo7
 ---------------------------------------
 ## Sponsors
 
+### 2025
+Renato
+Michael Ellis
+Jose Manuel Marrero León
+Roger Gimbrere
+Francesco Orabona
+Pierre-Alain Mentha
+Francisco Fos Ros
+Adrien Marceau
+Michael Wright
+
 ### 2024
 Renato
 Jarius Elliott
@@ -249,6 +260,14 @@ Panagiotis Theodosopoulos
 Antonis Vithoulkas
 Jean-Michel Louiset
 Marino Lippi
+Glenn Fowler
+Gary Ferland
+Jurica Polkovnikov
+Andreas Löwenhagen
+Theodoros Triparolis
+Emanuele Pizzurno
+David Rasley
+Robert Dougherty
 
 ### 2023
 Renato

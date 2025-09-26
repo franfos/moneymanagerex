@@ -60,7 +60,7 @@ Model_Tag::Data* Model_Tag::get(const wxString& name)
     return tag;
 }
 
-int Model_Tag::is_used(int id)
+int Model_Tag::is_used(int64 id)
 {
     Model_Taglink::Data_Set taglink = Model_Taglink::instance().find(Model_Taglink::TAGID(id));
 
@@ -69,13 +69,13 @@ int Model_Tag::is_used(int id)
 
     for (const auto& link : taglink)
     {
-        if (link.REFTYPE == Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION))
+        if (link.REFTYPE == Model_Attachment::REFTYPE_STR_TRANSACTION)
         {
             Model_Checking::Data* t = Model_Checking::instance().get(link.REFID);
             if (t && t->DELETEDTIME.IsEmpty())
                 return 1;
         }
-        else if (link.REFTYPE == Model_Attachment::reftype_desc(Model_Attachment::TRANSACTIONSPLIT))
+        else if (link.REFTYPE == Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT)
         {
             Model_Splittransaction::Data* s = Model_Splittransaction::instance().get(link.REFID);
             if (s)

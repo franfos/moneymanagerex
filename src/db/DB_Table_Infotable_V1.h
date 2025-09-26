@@ -1,7 +1,7 @@
 ﻿// -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2023 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2023-12-14 23:28:00.889504.
+ *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -49,7 +49,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
@@ -113,10 +113,10 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
         db->Commit();
     }
     
-    struct INFOID : public DB_Column<int>
+    struct INFOID : public DB_Column<int64>
     { 
         static wxString name() { return "INFOID"; } 
-        explicit INFOID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit INFOID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct INFONAME : public DB_Column<wxString>
@@ -170,16 +170,16 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
         /** This is a instance pointer to itself in memory. */
         Self* table_;
     
-        int INFOID;//  primary key
+        int64 INFOID;//  primary key
         wxString INFONAME;
         wxString INFOVALUE;
 
-        int id() const
+        int64 id() const
         {
             return INFOID;
         }
 
-        void id(const int id)
+        void id(const int64 id)
         {
             INFOID = id;
         }
@@ -213,10 +213,12 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
         {
             table_ = table;
         
-            INFOID = q.GetInt(0); // INFOID
+            INFOID = q.GetInt64(0); // INFOID
             INFONAME = q.GetString(1); // INFONAME
             INFOVALUE = q.GetString(2); // INFOVALUE
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
@@ -229,7 +231,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
         }
 
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }
@@ -266,7 +268,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
         void as_json(PrettyWriter<StringBuffer>& json_writer) const
         {
             json_writer.Key("INFOID");
-            json_writer.Int(this->INFOID);
+            json_writer.Int64(this->INFOID.GetValue());
             json_writer.Key("INFONAME");
             json_writer.String(this->INFONAME.utf8_str());
             json_writer.Key("INFOVALUE");
@@ -276,7 +278,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
         row_t to_row_t() const
         {
             row_t row;
-            row(L"INFOID") = INFOID;
+            row(L"INFOID") = INFOID.GetValue();
             row(L"INFONAME") = INFONAME;
             row(L"INFOVALUE") = INFOVALUE;
             return row;
@@ -284,7 +286,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
 
         void to_template(html_template& t) const
         {
-            t(L"INFOID") = INFOID;
+            t(L"INFOID") = INFOID.GetValue();
             t(L"INFONAME") = INFONAME;
             t(L"INFOVALUE") = INFOVALUE;
         }
@@ -362,7 +364,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO INFOTABLE_V1(INFONAME, INFOVALUE) VALUES(?, ?)";
+            sql = "INSERT INTO INFOTABLE_V1(INFONAME, INFOVALUE, INFOID) VALUES(?, ?, ?)";
         }
         else
         {
@@ -375,8 +377,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
 
             stmt.Bind(1, entity->INFONAME);
             stmt.Bind(2, entity->INFOVALUE);
-            if (entity->id() > 0)
-                stmt.Bind(3, entity->INFOID);
+            stmt.Bind(3, entity->id() > 0 ? entity->INFOID : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -399,14 +400,14 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(const int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
@@ -477,7 +478,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(const int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
@@ -525,7 +526,7 @@ struct DB_Table_INFOTABLE_V1 : public DB_Table
     /**
     * Search the database for the data record, bypassing the cache.
     */
-    Self::Data* get_record(const int id, wxSQLite3Database* db)
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {

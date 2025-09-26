@@ -24,21 +24,20 @@ Copyright (C) 2021-2024 Mark Whalley (mark@ipx.co.uk)
 
 #include "mmpanelbase.h"
 #include "mmcheckingpanel.h"
+#include "fusedtransaction.h"
 
 class mmCheckingPanel;
 
 class TransactionListCtrl : public mmListCtrl
 {
 public:
-
     TransactionListCtrl(mmCheckingPanel* cp
         , wxWindow* parent
         , const wxWindowID id = wxID_ANY);
 
     ~TransactionListCtrl();
 
-    void createColumns();
-    Model_Checking::Full_Data_Set m_trans;
+    Fused_Transaction::Full_Data_Set m_trans;
     void markSelectedTransaction();
     void DeleteTransactionsByStatus(const wxString& status);
     void resetColumns();
@@ -68,14 +67,15 @@ public:
         COL_UDFC04,
         COL_UDFC05,
         COL_UPDATEDTIME,
-        COL_MAX, // number of columns
-        COL_DEF_SORT = COL_DATE, // don't omit any columns before this
-        COL_DEF_SORT2 = COL_ID 
+        COL_SN,
+        COL_size, // number of columns
+        COL_def_sort = COL_DATE, // don't omit any columns before this
+        COL_def_sort2 = COL_ID 
     };
     EColumn toEColumn(const unsigned long col);
 
-    EColumn g_sortcol = COL_DEF_SORT; // index of primary column to sort by
-    EColumn prev_g_sortcol = COL_DEF_SORT2; // index of secondary column to sort by
+    EColumn g_sortcol = COL_def_sort; // index of primary column to sort by
+    EColumn prev_g_sortcol = COL_def_sort2; // index of secondary column to sort by
     bool g_asc = true; // asc\desc sorting for primary sort column
     bool prev_g_asc = true; // asc\desc sorting for secondary sort column
 
@@ -95,6 +95,8 @@ public:
     void OnRestoreViewedTransaction(wxCommandEvent&);
     void OnEditTransaction(wxCommandEvent& event);
     void OnDuplicateTransaction(wxCommandEvent& event);
+    void OnEnterScheduled(wxCommandEvent& event);
+    void OnSkipScheduled(wxCommandEvent& event);
     void OnSetUserColour(wxCommandEvent& event);
     void OnMoveTransaction(wxCommandEvent& event);
     void OnOpenAttachment(wxCommandEvent& event);
@@ -106,10 +108,9 @@ public:
     void refreshVisualList(bool filter = true);
     void sortTable();
 public:
-    std::vector<int> getSelectedForCopy() const;
-
-    std::vector<int> getSelectedId() const;
-    void setSelectedID(int v);
+    std::vector<Fused_Transaction::IdRepeat> getSelectedForCopy() const;
+    std::vector<Fused_Transaction::IdRepeat> getSelectedId() const;
+    void setSelectedID(Fused_Transaction::IdRepeat sel_id);
     void doSearchText(const wxString& value);
     /* Getter for Virtual List Control */
     const wxString getItem(long item, long column, bool realenum = false) const;
@@ -121,9 +122,9 @@ protected:
 private:
     void markItem(long selectedItem);
 
-    std::vector<int> m_selectedForCopy; // the copied transactions (held for pasting)
-    std::vector<int> m_pasted_id;       // the last pasted transactions
-    std::vector<int> m_selected_id;     // the selected transactions
+    std::vector<Fused_Transaction::IdRepeat> m_selectedForCopy; // the copied transactions (held for pasting)
+    std::vector<Fused_Transaction::IdRepeat> m_pasted_id;       // the last pasted transactions
+    std::vector<Fused_Transaction::IdRepeat> m_selected_id;     // the selected transactions
     enum
     {
         MENU_TREEPOPUP_MARKRECONCILED = wxID_HIGHEST + 150,
@@ -150,6 +151,8 @@ private:
         MENU_ON_PASTE_TRANSACTION,
         MENU_ON_NEW_TRANSACTION,
         MENU_ON_DUPLICATE_TRANSACTION,
+        MENU_ON_ENTER_SCHEDULED,
+        MENU_ON_SKIP_SCHEDULED,
 
         MENU_ON_SET_UDC0, //Default color
         MENU_ON_SET_UDC1, //User defined color 1
@@ -208,12 +211,14 @@ private:
     void OnCopy(wxCommandEvent& WXUNUSED(event));
     void OnPaste(wxCommandEvent& WXUNUSED(event));
     void OnListItemFocused(wxListEvent& WXUNUSED(event));
-    int OnPaste(Model_Checking::Data* tran);
+    int64 OnPaste(Model_Checking::Data* tran);
 
-    bool TransactionLocked(int AccountID, const wxString& transdate);
+    bool TransactionLocked(int64 AccountID, const wxString& transdate);
     void FindSelectedTransactions();
     bool CheckForClosedAccounts();
     void setExtraTransactionData(const bool single);
+    template<class Compare>
+    void SortBy(Compare comp, bool ascend);
     void SortTransactions(int sortcol, bool ascend);
     void findInAllTransactions(wxCommandEvent&);
     void OnCopyText(wxCommandEvent&);
@@ -222,7 +227,7 @@ private:
     /* The topmost visible item - this will be used to set
     where to display the list again after refresh */
     long m_topItemIndex = -1;
-    EColumn m_sortCol = COL_DEF_SORT;
+    EColumn m_sortCol = COL_def_sort;
     wxString m_today;
     bool m_firstSort = true;
     wxString rightClickFilter_;
@@ -232,23 +237,62 @@ private:
 //----------------------------------------------------------------------------
 
 inline bool TransactionListCtrl::getSortOrder() const { return m_asc; }
-inline std::vector<int> TransactionListCtrl::getSelectedForCopy() const { return m_selectedForCopy; }
+inline std::vector<Fused_Transaction::IdRepeat> TransactionListCtrl::getSelectedForCopy() const { return m_selectedForCopy; }
 
-inline std::vector<int> TransactionListCtrl::getSelectedId() const { return m_selected_id; }
+inline std::vector<Fused_Transaction::IdRepeat> TransactionListCtrl::getSelectedId() const { return m_selected_id; }
 
 inline void TransactionListCtrl::setVisibleItemIndex(long v) { m_topItemIndex = v; }
-inline void TransactionListCtrl::createColumns(){ mmListCtrl::CreateColumns(); }
 
 #endif // MM_EX_CHECKING_LIST_H_
 
-inline static bool SorterByUDFC01(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC01 < j.UDFC01); }
-inline static bool SorterByUDFC02(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC02 < j.UDFC02); }
-inline static bool SorterByUDFC03(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC03 < j.UDFC03); }
-inline static bool SorterByUDFC04(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC04 < j.UDFC04); }
-inline static bool SorterByUDFC05(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC05 < j.UDFC05); }
+inline static bool SorterByUDFC01(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[0] < j.UDFC_content[0]);
+}
+inline static bool SorterByUDFC02(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[1] < j.UDFC_content[1]);
+}
+inline static bool SorterByUDFC03(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[2] < j.UDFC_content[2]);
+}
+inline static bool SorterByUDFC04(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[3] < j.UDFC_content[3]);
+}
+inline static bool SorterByUDFC05(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_content[4] < j.UDFC_content[4]);
+}
 
-inline static bool SorterByUDFC01_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC01_val < j.UDFC01_val); }
-inline static bool SorterByUDFC02_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC02_val < j.UDFC02_val); }
-inline static bool SorterByUDFC03_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC03_val < j.UDFC03_val); }
-inline static bool SorterByUDFC04_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC04_val < j.UDFC04_val); }
-inline static bool SorterByUDFC05_val(const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j) { return (i.UDFC05_val < j.UDFC05_val); }
+inline static bool SorterByUDFC01_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[0] < j.UDFC_value[0]);
+}
+inline static bool SorterByUDFC02_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[1] < j.UDFC_value[1]);
+}
+inline static bool SorterByUDFC03_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[2] < j.UDFC_value[2]);
+}
+inline static bool SorterByUDFC04_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[3] < j.UDFC_value[3]);
+}
+inline static bool SorterByUDFC05_val(
+    const Model_Checking::Full_Data& i, const Model_Checking::Full_Data& j
+) {
+    return (i.UDFC_value[4] < j.UDFC_value[4]);
+}

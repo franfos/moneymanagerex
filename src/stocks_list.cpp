@@ -143,16 +143,16 @@ void StocksListCtrl::OnMouseRightClick(wxMouseEvent& event)
     bool hide_menu_item = (m_selected_row < 0);
 
     wxMenu menu;
-    menu.Append(MENU_TREEPOPUP_NEW, _("&New Stock Investment..."));
+    menu.Append(MENU_TREEPOPUP_NEW, _u("&New Stock Investment…"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_ADDTRANS, _("&Add Stock Transactions..."));
+    menu.Append(MENU_TREEPOPUP_ADDTRANS, _u("&Add Stock Transactions…"));
     menu.Append(MENU_TREEPOPUP_VIEWTRANS, _("&View Stock Transactions"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_EDIT, _("&Edit Stock Investment..."));
+    menu.Append(MENU_TREEPOPUP_EDIT, _u("&Edit Stock Investment…"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_DELETE, _("&Delete Stock Investment..."));
+    menu.Append(MENU_TREEPOPUP_DELETE, _u("&Delete Stock Investment…"));
     menu.AppendSeparator();
-    menu.Append(MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS, _("&Organize Attachments..."));
+    menu.Append(MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS, _u("&Organize Attachments…"));
     menu.Append(wxID_INDEX, _("Stock &Web Page"));
 
     menu.Enable(MENU_TREEPOPUP_EDIT, !hide_menu_item);
@@ -171,8 +171,8 @@ wxString StocksListCtrl::OnGetItemText(long item, long column) const
 {
     column = m_real_columns[column];
 
-    if (column == COL_ID)           return wxString::Format("%i", m_stocks[item].STOCKID).Trim();
-    if (column == COL_DATE)         return mmGetDateForDisplay(m_stocks[item].PURCHASEDATE);
+    if (column == COL_ID)           return wxString::Format("%lld", m_stocks[item].STOCKID).Trim();
+    if (column == COL_DATE)         return mmGetDateTimeForDisplay(m_stocks[item].PURCHASEDATE);
     if (column == COL_NAME)         return m_stocks[item].STOCKNAME;
     if (column == COL_SYMBOL)       return m_stocks[item].SYMBOL;
     if (column == COL_NUMBER)
@@ -186,13 +186,13 @@ wxString StocksListCtrl::OnGetItemText(long item, long column) const
     if (column == COL_GAIN_LOSS)    return Model_Currency::toString(GetGainLoss(item), m_stock_panel->m_currency);
     if (column == COL_CURRENT)      return Model_Currency::toString(m_stocks[item].CURRENTPRICE, m_stock_panel->m_currency, 4);
     if (column == COL_CURRVALUE)    return Model_Currency::toString(Model_Stock::CurrentValue(m_stocks[item]), m_stock_panel->m_currency);
-    if (column == COL_PRICEDATE)    return mmGetDateForDisplay(Model_Stock::instance().lastPriceDate(&m_stocks[item]));
+    if (column == COL_PRICEDATE)    return mmGetDateTimeForDisplay(Model_Stock::instance().lastPriceDate(&m_stocks[item]));
     if (column == COL_COMMISSION)   return Model_Currency::toString(m_stocks[item].COMMISSION, m_stock_panel->m_currency);
     if (column == COL_NOTES)
     {
         wxString full_notes = m_stocks[item].NOTES;
         full_notes.Replace("\n", " ");
-        if (Model_Attachment::NrAttachments(Model_Attachment::reftype_desc(Model_Attachment::STOCK), m_stocks[item].STOCKID))
+        if (Model_Attachment::NrAttachments(Model_Attachment::REFTYPE_STR_STOCK, m_stocks[item].STOCKID))
             full_notes.Prepend(mmAttachmentManage::GetAttachmentNoteSign());
         return full_notes;
     }
@@ -291,8 +291,8 @@ void StocksListCtrl::OnDeleteStocks(wxCommandEvent& /*event*/)
     if (msgDlg.ShowModal() == wxID_YES)
     {
         Model_Stock::instance().remove(m_stocks[m_selected_row].STOCKID);
-        mmAttachmentManage::DeleteAllAttachments(Model_Attachment::reftype_desc(Model_Attachment::STOCK), m_stocks[m_selected_row].STOCKID);
-        Model_Translink::RemoveTransLinkRecords(Model_Attachment::STOCK, m_stocks[m_selected_row].STOCKID);
+        mmAttachmentManage::DeleteAllAttachments(Model_Attachment::REFTYPE_STR_STOCK, m_stocks[m_selected_row].STOCKID);
+        Model_Translink::RemoveTransLinkRecords(Model_Attachment::REFTYPE_ID_STOCK, m_stocks[m_selected_row].STOCKID);
         DeleteItem(m_selected_row);
         doRefreshItems(-1);
         m_stock_panel->m_frame->RefreshNavigationTree();
@@ -311,7 +311,7 @@ void StocksListCtrl::OnMoveStocks(wxCommandEvent& /*event*/)
     wxString headerMsg = wxString::Format(_("Moving Transaction from %s to"), from_account->ACCOUNTNAME);
     mmSingleChoiceDialog scd(this, _("Select the destination Account "), headerMsg , accounts);
 
-    int toAccountID = -1;
+    int64 toAccountID = -1;
     int error_code = scd.ShowModal();
     if (error_code == wxID_OK)
     {
@@ -346,8 +346,8 @@ void StocksListCtrl::OnOrganizeAttachments(wxCommandEvent& /*event*/)
 {
     if (m_selected_row < 0) return;
 
-    wxString RefType = Model_Attachment::reftype_desc(Model_Attachment::STOCK);
-    int RefId = m_stocks[m_selected_row].STOCKID;
+    wxString RefType = Model_Attachment::REFTYPE_STR_STOCK;
+    int64 RefId = m_stocks[m_selected_row].STOCKID;
 
     mmAttachmentDialog dlg(this, RefType, RefId);
     dlg.ShowModal();
@@ -372,8 +372,8 @@ void StocksListCtrl::OnOpenAttachment(wxCommandEvent& /*event*/)
 {
     if (m_selected_row < 0) return;
 
-    wxString RefType = Model_Attachment::reftype_desc(Model_Attachment::STOCK);
-    int RefId = m_stocks[m_selected_row].STOCKID;
+    wxString RefType = Model_Attachment::REFTYPE_STR_STOCK;
+    int64 RefId = m_stocks[m_selected_row].STOCKID;
 
     mmAttachmentManage::OpenAttachmentFromPanelIcon(this, RefType, RefId);
     doRefreshItems(RefId);
@@ -417,13 +417,13 @@ void StocksListCtrl::OnColClick(wxListEvent& event)
     Model_Setting::instance().Set("STOCKS_ASC", m_asc);
     Model_Setting::instance().Set("STOCKS_SORT_COL", m_selected_col);
 
-    int trx_id = -1;
+    int64 trx_id = -1;
     if (m_selected_row>=0) trx_id = m_stocks[m_selected_row].STOCKID;
     doRefreshItems(trx_id);
     m_stock_panel->OnListItemSelected(-1);
 }
 
-void StocksListCtrl::doRefreshItems(int trx_id)
+void StocksListCtrl::doRefreshItems(int64 trx_id)
 {
     int selectedIndex = initVirtualListControl(trx_id, m_selected_col, m_asc);
     long cnt = static_cast<long>(m_stocks.size());
@@ -446,7 +446,7 @@ void StocksListCtrl::doRefreshItems(int trx_id)
     }
 }
 
-int StocksListCtrl::initVirtualListControl(int id, int col, bool asc)
+int StocksListCtrl::initVirtualListControl(int64 trx_id, int col, bool asc)
 {
     m_stock_panel->updateHeader();
     /* Clear all the records */
@@ -466,7 +466,7 @@ int StocksListCtrl::initVirtualListControl(int id, int col, bool asc)
     int cnt = 0, selected_item = -1;
     for (auto& stock : m_stocks)
     {
-        if (id == stock.STOCKID)
+        if (trx_id == stock.STOCKID)
         {
             selected_item = cnt;
             break;

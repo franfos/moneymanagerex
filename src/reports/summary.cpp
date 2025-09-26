@@ -48,10 +48,10 @@ std::map<wxDate, double> mmReportSummaryByDate::createCheckingBalanceMap(const M
     std::map<wxDate, double> balanceMap;
     double balance = account.INITIALBAL;
 
-    for (const auto& tran : Model_Account::transaction(account))
+    for (const auto& tran : Model_Account::transactionsByDateTimeId(account))
     {
         wxDate date = Model_Checking::TRANSDATE(tran);
-        balance += Model_Checking::balance(tran, account.ACCOUNTID);
+        balance += Model_Checking::account_flow(tran, account.ACCOUNTID);
         balanceMap[date] = balance;
     } 
     return balanceMap;
@@ -94,9 +94,9 @@ double mmReportSummaryByDate::getDailyBalanceAt(const Model_Account::Data* accou
     }
 }
 
-double mmReportSummaryByDate::getDayRate(int currencyid, const wxDate& date)
+double mmReportSummaryByDate::getDayRate(int64 currencyid, const wxDate& date)
 {
-    wxString key = wxString::Format("%d_%s", currencyid, date.FormatDate());
+    wxString key = wxString::Format("%lld_%s", currencyid, date.FormatDate());
 
     auto i = currencyDateRateCache.find(key);
     if (i != currencyDateRateCache.end())
@@ -112,7 +112,7 @@ double mmReportSummaryByDate::getDayRate(int currencyid, const wxDate& date)
 
 wxString mmReportSummaryByDate::getHTMLText()
 {
-    double balancePerDay[Model_Account::TYPE_ID_MAX];
+    double balancePerDay[Model_Account::TYPE_ID_size];
     mmHTMLBuilder   hb;
     wxDate dateStart = wxDate::Today();
     wxDate dateEnd = wxDate::Today();
@@ -125,7 +125,7 @@ wxString mmReportSummaryByDate::getHTMLText()
     std::vector<BalanceEntry> totBalanceData;
 
     GraphData gd;
-    GraphSeries gs_data[Model_Account::TYPE_ID_MAX + 2];    // +2 as we add assets and balance to the end
+    GraphSeries gs_data[Model_Account::TYPE_ID_size + 2];    // +2 as we add assets and balance to the end
 
     std::vector<wxDate> arDates;
 
@@ -234,7 +234,7 @@ wxString mmReportSummaryByDate::getHTMLText()
         totBalanceEntry.values.push_back(balancePerDay[Model_Account::TYPE_ID_SHARES]);
         gs_data[6].values.push_back(balancePerDay[Model_Account::TYPE_ID_SHARES]);
 
-        for (int i = 0; i < Model_Account::TYPE_ID_MAX; i++) {
+        for (int i = 0; i < Model_Account::TYPE_ID_size; i++) {
             if (i != Model_Account::TYPE_ID_INVESTMENT)
                 total += balancePerDay[i];
         }

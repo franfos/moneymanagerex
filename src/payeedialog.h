@@ -73,7 +73,7 @@ public:
     ~mmPayeeDialog();
     mmPayeeDialog(wxWindow* parent, bool payee_choose, const wxString& name = "mmPayeeDialog", const wxString& payee_selected = wxEmptyString);
     void DisableTools();
-    int getPayeeId() const;
+    int64 getPayeeId() const;
     bool getRefreshRequested() const;
 
 private:
@@ -103,7 +103,7 @@ private:
     wxSearchCtrl* m_maskTextCtrl = nullptr;
     wxBitmapButton* m_magicButton = nullptr;
 
-    int m_payee_id = -1;
+    int64 m_payee_id = -1;
     bool m_payee_choose = false;
     wxString m_init_selected_payee;
     int m_payee_rename = -1;
@@ -111,6 +111,7 @@ private:
     int m_sort = cols::PAYEE_NAME, m_lastSort = cols::PAYEE_NAME;
     bool refreshRequested_ = false, m_sortReverse = false;
     std::map<int, wxString> ColName_;
+    std::map<long, int64> payee_idx_map_;
 
 private:
     mmPayeeDialog() {}
@@ -126,8 +127,8 @@ private:
     void RemoveDefaultCategory();
     void OnOrganizeAttachments();
     void OnPayeeRelocate();
-    int FindSelectedPayee();
-    void FindSelectedPayees(std::list<int>& indexes);
+    int64 FindSelectedPayee();
+    void FindSelectedPayees(std::list<int64>& indexes);
     void OnCancel(wxCommandEvent& /*event*/);
     void OnOk(wxCommandEvent& /*event*/);
 
@@ -142,7 +143,7 @@ private:
 };
 
 inline void mmPayeeDialog::DisableTools() { m_magicButton->Disable(); }
-inline int mmPayeeDialog::getPayeeId() const { return m_payee_id; }
+inline int64 mmPayeeDialog::getPayeeId() const { return m_payee_id; }
 inline bool mmPayeeDialog::getRefreshRequested() const { return refreshRequested_; }
 inline void mmPayeeDialog::OnListItemDeselected(wxListEvent& WXUNUSED(event)) { m_payee_id = -1; }
 

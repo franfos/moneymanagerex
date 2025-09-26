@@ -67,13 +67,27 @@ wxString JSON_Formated(rapidjson::Document& j_doc)
 
 //----------------------------------------------------------------------------
 
-mmTreeItemData::mmTreeItemData(int type, int id)
-    : id_(id)
-    , type_(type)
+mmTreeItemData::mmTreeItemData(int type, int64 id)
+    : type_(type)
+    , id_(id)
     , report_(nullptr)
 {
-    stringData_ = (wxString::Format("%i", id));
+    stringData_ = wxString::Format("%lld", id);
 }
+
+mmTreeItemData::mmTreeItemData(int type, const wxString& data)
+    : type_(type)
+    , stringData_(data)
+    , report_(nullptr)
+{}
+
+mmTreeItemData::mmTreeItemData(int type, int64 id, const wxString& data)
+    : type_(type)
+    , id_(id)
+    , stringData_(data)
+    , report_(nullptr)
+{}
+
 mmTreeItemData::mmTreeItemData(const wxString& data, mmPrintableBase* report)
     : type_(mmTreeItemData::REPORT)
     , stringData_(data)
@@ -83,15 +97,11 @@ mmTreeItemData::mmTreeItemData(const wxString& data, mmPrintableBase* report)
     const wxString& settings = Model_Infotable::instance().GetStringInfo(n, "");
     report_->initReportSettings(settings);
 }
+
 mmTreeItemData::mmTreeItemData(mmPrintableBase* report, const wxString& data)
     : type_(mmTreeItemData::GRM)
     , stringData_(data)
     , report_(report)
-{}
-mmTreeItemData::mmTreeItemData(int type, const wxString& data)
-    : type_(type)
-    , stringData_(data)
-    , report_(nullptr)
 {}
 
 //----------------------------------------------------------------------------
@@ -302,63 +312,119 @@ static const wxString g_short_days_of_week[7] =
     , wxTRANSLATE("Sat")
 };
 
-const wxString mmGetTimeForDisplay(const wxString& iso_date)
+const wxString mmGetDateTimeForDisplay(const wxString &datetime_iso, const wxString& format)
 {
-    return iso_date.Mid(11, 9);
-}
+    // ISO Date to formatted string lookup table.
+    static std::unordered_map<wxString, wxString> cache;
+    static wxString cache_format;
+    static wxRegEx date_pattern(R"(^[0-9]{4}\-[0-9]{2}\-[0-9]{2})");
 
-const wxString mmGetDateForDisplay(const wxString &iso_date, const wxString& dateFormat)
-{
-    //ISO Date to formatted string lookup table.
-    static std::unordered_map<wxString, wxString> dateLookup;
-    static wxString date_format;
-    if (date_format.empty())
-        date_format = Option::instance().getDateFormat();
+    if (format.empty())
+        return "";
+
+    if (!date_pattern.Matches(datetime_iso))
+        return "";
 
     // If format has been changed, delete all stored strings.
-    if (dateFormat != date_format)
-    {
-        dateLookup.clear();
-        if (dateFormat.empty()) {
-            return "";
-        }
-        date_format = dateFormat;
+    if (cache_format != format) {
+        cache.clear();
+        cache_format = format;
     }
 
-    // If date exists in lookup - return it.
-    auto it = dateLookup.find(iso_date);
-    if (it != dateLookup.end())
-        return it->second; // The stored formatted date.
+    // Reset cache if it is too big.
+    if (cache.size() > 2000) {
+        cache.clear();
+    }
 
-    wxRegEx pattern(R"([0-9]{4}\-[0-9]{2}\-[0-9]{2})");
-    if (!pattern.Matches(iso_date)) {
+    // If datetime_iso is in cache, return the stored formatted string.
+    auto it = cache.find(datetime_iso);
+    if (it != cache.end())
+        return it->second;
+
+    // Format date.
+    wxString datetime_str = format;
+    datetime_str.Replace("%Y", datetime_iso.Mid(0, 4));
+    datetime_str.Replace("%y", datetime_iso.Mid(2, 2));
+    if (datetime_str.Contains("%Mon")) {
+        const auto mon = wxGetTranslation(MONTHS_SHORT[wxAtoi(datetime_iso.Mid(5, 2)) - 1]);
+        datetime_str.Replace("%Mon", mon);
+    }
+    datetime_str.Replace("%m", datetime_iso.Mid(5, 2));
+    datetime_str.Replace("%d", datetime_iso.Mid(8, 2));
+    if (datetime_str.Contains("%w")) {
+        wxDateTime d;
+        d.ParseISODate(datetime_iso);
+        const auto weekday = wxGetTranslation(g_short_days_of_week[d.GetWeekDay()]);
+        datetime_str.Replace("%w", weekday);
+    }
+
+    // Format time.
+    if (datetime_iso.Length() == 19) {
+        datetime_str.Replace("%H", datetime_iso.Mid(11, 2));
+        datetime_str.Replace("%M", datetime_iso.Mid(14, 2));
+        datetime_str.Replace("%S", datetime_iso.Mid(17, 2));
+    }
+
+    // Store formatted string and return it.
+    return cache[datetime_iso] = datetime_str;
+}
+
+const wxString mmGetDateForDisplay(const wxString &datetime_iso, const wxString& format)
+{
+    // ISO Date to formatted string lookup table.
+    static std::unordered_map<wxString, wxString> cache;
+    static wxString cache_format;
+    static wxRegEx date_pattern(R"(^[0-9]{4}\-[0-9]{2}\-[0-9]{2})");
+
+    if (format.empty())
         return "";
+
+    if (!date_pattern.Matches(datetime_iso))
+        return "";
+
+    // If format has been changed, delete all stored strings.
+    if (cache_format != format) {
+        cache.clear();
+        cache_format = format;
     }
 
-    // Format date, store it and return it.
-    wxString date_str = dateFormat;
-    if (date_str.Replace("%Y", iso_date.Mid(0, 4)) == 0)
-        date_str.Replace("%y", iso_date.Mid(2, 2));
+    // Reset cache if it is too big.
+    if (cache.size() > 2000) {
+        cache.clear();
+    }
 
+    // Get the date part.
+    wxString date_iso = datetime_iso.Left(10);
+
+    // If date_iso is in cache, return the stored formatted string.
+    auto it = cache.find(date_iso);
+    if (it != cache.end())
+        return it->second;
+
+    // Format date.
+    wxString date_str = format;
+    date_str.Replace("%Y", date_iso.Mid(0, 4));
+    date_str.Replace("%y", date_iso.Mid(2, 2));
     if (date_str.Contains("%Mon")) {
-        const auto mon = wxGetTranslation(MONTHS_SHORT[wxAtoi(iso_date.Mid(5, 2)) - 1]);
-        date_str.Replace("%Mon", wxGetTranslation(mon));
+        const auto mon = wxGetTranslation(MONTHS_SHORT[wxAtoi(date_iso.Mid(5, 2)) - 1]);
+        date_str.Replace("%Mon", mon);
     }
-
-    date_str.Replace("%m", iso_date.Mid(5, 2));
-    date_str.Replace("%d", iso_date.Mid(8, 2));
+    date_str.Replace("%m", date_iso.Mid(5, 2));
+    date_str.Replace("%d", date_iso.Mid(8, 2));
     if (date_str.Contains("%w")) {
         wxDateTime d;
-        d.ParseISODate(iso_date);
-        const auto week = wxGetTranslation(g_short_days_of_week[d.GetWeekDay()]);
-        date_str.Replace("%w", wxGetTranslation(week));
+        d.ParseISODate(date_iso);
+        const auto weekday = wxGetTranslation(g_short_days_of_week[d.GetWeekDay()]);
+        date_str.Replace("%w", weekday);
     }
-    if (iso_date.Length() == 19) {
-        date_str.Replace("%H", iso_date.Mid(11, 2));
-        date_str.Replace("%M", iso_date.Mid(14, 2));
-        date_str.Replace("%S", iso_date.Mid(17, 2));
-    }
-    return dateLookup[iso_date] = date_str;
+
+    // Store formatted string and return it.
+    return cache[date_iso] = date_str;
+}
+
+const wxString mmGetTimeForDisplay(const wxString& datetime_iso)
+{
+    return (datetime_iso.Length() == 19) ? datetime_iso.Mid(11, 8) : wxString("00:00:00");
 }
 
 bool mmParseDisplayStringToDate(wxDateTime& date, const wxString& str_date, const wxString &sDateMask)
@@ -675,13 +741,13 @@ END_EVENT_TABLE()
 
 //--------------------------------------------------------------------
 
-bool getOnlineCurrencyRates(wxString& msg,const int curr_id, const bool used_only)
+bool getOnlineCurrencyRates(wxString& msg,const int64 curr_id, const bool used_only)
 {
     wxString base_currency_symbol;
 
     if (!Model_Currency::GetBaseCurrencySymbol(base_currency_symbol))
     {
-        msg = _("Could not find base currency symbol!");
+        msg = _("Unable to find base currency symbol!");
         return false;
     }
 
@@ -806,7 +872,7 @@ bool get_yahoo_prices(std::map<wxString, double>& symbols
 
     for (const auto& entry : symbols)
     {
-        wxRegEx pattern(R"(^([-a-zA-Z0-9_@=\.]+)$)");
+        wxRegEx pattern(R"(^([\^-a-zA-Z0-9_@=\.]+)$)");
         if (!pattern.Matches(entry.first))
             continue;
 
@@ -1008,7 +1074,7 @@ bool getCoincapInfoFromSymbol(const wxString& symbol, wxString& out_id, double& 
         }
     }
 
-    output = _("Could not find asset for symbol");
+    output = _("Unable to find asset for symbol.");
     return false;
 }
 
@@ -1043,7 +1109,7 @@ bool getCoincapAssetHistory(const wxString& asset_id, wxDateTime begin_date, std
 
     wxString baseCurrencySymbol;
     if (!Model_Currency::GetBaseCurrencySymbol(baseCurrencySymbol)) {
-        msg = _("Could not get base currency!");
+        msg = _("Unable to get base currency!");
         return false;
     }
 
@@ -1052,7 +1118,7 @@ bool getCoincapAssetHistory(const wxString& asset_id, wxDateTime begin_date, std
     if (baseCurrencySymbol != _("USD")) {
         auto usd = Model_Currency::instance().GetCurrencyRecord("USD");
         if (usd == nullptr) {
-            msg = _("Could not find currency 'USD', needed for converting history prices");
+            msg = _("Unable to find currency 'USD', required for converting historical prices");
             return false;
         }
 
@@ -1073,7 +1139,7 @@ bool getCoincapAssetHistory(const wxString& asset_id, wxDateTime begin_date, std
             auto priceUSD = wxString::FromUTF8(entry["priceUsd"].GetString());
 
             if (!priceUSD.ToCDouble(&price_usd)) {
-                msg = _("Could not parse price in asset history");
+                msg = _("Unable to parse price in asset history");
                 return false;
             }
 
@@ -1450,7 +1516,7 @@ const wxString getProgramDescription(const int type)
         << bull << wxString::Format(simple ? "Built: %1$s %2$s" : _("Built on: %1$s %2$s"), build_date, BUILD_TIME) << eol
         << bull << wxString::Format(simple ? "db %d" : _("Database version: %d"), mmex::version::getDbLatestVersion())
 #if WXSQLITE3_HAVE_CODEC
-        << " (" << wxSQLite3Cipher::GetCipherName(wxSQLite3Cipher::GetGlobalCipherDefault()) << ")"
+        << " (aes256cbc-hmac-sha512)"
 #endif
         << eol
 
@@ -1675,10 +1741,12 @@ const wxString mmSeparator::getSeparator() const
 bool mmSeparator::isStringHasSeparator(const wxString &string)
 {
     bool result = false;
-    bool skip = false;
+
     for (const auto& entry : m_separators)
     {
-        for (const auto& letter : string) {
+        bool skip = false;
+        for (const auto& letter : string)
+        {
             if (letter == '"') {
                 skip = !skip;
             }

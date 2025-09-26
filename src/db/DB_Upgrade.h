@@ -1,13 +1,13 @@
 //=============================================================================
 /**
- *      Copyright (c) 2016 - 2023 Gabriele-V
+ *      Copyright (c) 2016 - 2025 Gabriele-V
  *
  *      @author [sqliteupgrade2cpp.py]
  *
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2023-07-09 11:41:39.625757.
+ *          AUTO GENERATED at 2025-02-04 16:22:20.096031.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -18,7 +18,7 @@
 #include <vector>
 #include <wx/string.h>
 
-const int dbLatestVersion = 19;
+const int dbLatestVersion = 20;
 
 const std::vector<wxString> dbUpgradeQuery =
 {
@@ -417,6 +417,23 @@ const std::vector<wxString> dbUpgradeQuery =
         
         UPDATE CHECKINGACCOUNT_V1 SET COLOR = FOLLOWUPID;
         UPDATE BILLSDEPOSITS_v1 SET COLOR = FOLLOWUPID;
+    )",
+
+    // Upgrade to version 20
+    R"(
+        -- db tidy, fix corrupt indices
+        REINDEX;
+        
+        -- realign missing category #7175
+        -- set as inactive with <recovery> info
+        UPDATE CATEGORY_V1
+          set active = 0,
+              PARENTID = -1,
+              CATEGNAME = CATEGNAME || " [recovered]"
+          where CATEGID = PARENTID;
+        
+        -- To alleviate future issues we are normalizing the TRANSDATE column
+        UPDATE CHECKINGACCOUNT_V1 SET TRANSDATE = TRANSDATE || 'T00:00:00' WHERE LENGTH(TRANSDATE)=10;
     )",
 
 };

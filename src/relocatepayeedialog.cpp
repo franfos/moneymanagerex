@@ -48,7 +48,7 @@ relocatePayeeDialog::~relocatePayeeDialog()
     Model_Infotable::instance().Set("RELOCATEPAYEE_DIALOG_SIZE", GetSize());
 }
 
-relocatePayeeDialog::relocatePayeeDialog(wxWindow* parent, int source_payee_id)
+relocatePayeeDialog::relocatePayeeDialog(wxWindow* parent, int64 source_payee_id)
 {
     sourcePayeeID_  = source_payee_id;
 
@@ -178,7 +178,7 @@ void relocatePayeeDialog::OnOk(wxCommandEvent& WXUNUSED(event))
         {
             if (Model_Payee::instance().remove(sourcePayeeID_))
             {
-                mmAttachmentManage::DeleteAllAttachments(Model_Attachment::reftype_desc(Model_Attachment::PAYEE), sourcePayeeID_);
+                mmAttachmentManage::DeleteAllAttachments(Model_Attachment::REFTYPE_STR_PAYEE, sourcePayeeID_);
                 mmWebApp::MMEX_WebApp_UpdatePayee();
             }
             cbSourcePayee_->mmDoReInitialize();

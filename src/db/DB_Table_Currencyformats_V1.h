@@ -1,7 +1,7 @@
 ﻿// -*- C++ -*-
 //=============================================================================
 /**
- *      Copyright: (c) 2013 - 2023 Guan Lisheng (guanlisheng@gmail.com)
+ *      Copyright: (c) 2013 - 2025 Guan Lisheng (guanlisheng@gmail.com)
  *      Copyright: (c) 2017 - 2018 Stefano Giorgio (stef145g)
  *      Copyright: (c) 2022 Mark Whalley (mark@ipx.co.uk)
  *
@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2023-12-14 23:28:00.889504.
+ *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -49,7 +49,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
 
     /** A container to hold a list of Data record pointers for the table in memory*/
     typedef std::vector<Self::Data*> Cache;
-    typedef std::map<int, Self::Data*> Index_By_Id;
+    typedef std::map<int64, Self::Data*> Index_By_Id;
     Cache cache_;
     Index_By_Id index_by_id_;
     Data* fake_; // in case the entity not found
@@ -280,10 +280,10 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         db->Commit();
     }
     
-    struct CURRENCYID : public DB_Column<int>
+    struct CURRENCYID : public DB_Column<int64>
     { 
         static wxString name() { return "CURRENCYID"; } 
-        explicit CURRENCYID(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit CURRENCYID(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct CURRENCYNAME : public DB_Column<wxString>
@@ -328,10 +328,10 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         explicit CENT_NAME(const wxString &v, OP op = EQUAL): DB_Column<wxString>(v, op) {}
     };
     
-    struct SCALE : public DB_Column<int>
+    struct SCALE : public DB_Column<int64>
     { 
         static wxString name() { return "SCALE"; } 
-        explicit SCALE(const int &v, OP op = EQUAL): DB_Column<int>(v, op) {}
+        explicit SCALE(const int64 &v, OP op = EQUAL): DB_Column<int64>(v, op) {}
     };
     
     struct BASECONVRATE : public DB_Column<double>
@@ -418,7 +418,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         /** This is a instance pointer to itself in memory. */
         Self* table_;
     
-        int CURRENCYID;//  primary key
+        int64 CURRENCYID;//  primary key
         wxString CURRENCYNAME;
         wxString PFX_SYMBOL;
         wxString SFX_SYMBOL;
@@ -426,17 +426,17 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         wxString GROUP_SEPARATOR;
         wxString UNIT_NAME;
         wxString CENT_NAME;
-        int SCALE;
+        int64 SCALE;
         double BASECONVRATE;
         wxString CURRENCY_SYMBOL;
         wxString CURRENCY_TYPE;
 
-        int id() const
+        int64 id() const
         {
             return CURRENCYID;
         }
 
-        void id(const int id)
+        void id(const int64 id)
         {
             CURRENCYID = id;
         }
@@ -481,7 +481,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         {
             table_ = table;
         
-            CURRENCYID = q.GetInt(0); // CURRENCYID
+            CURRENCYID = q.GetInt64(0); // CURRENCYID
             CURRENCYNAME = q.GetString(1); // CURRENCYNAME
             PFX_SYMBOL = q.GetString(2); // PFX_SYMBOL
             SFX_SYMBOL = q.GetString(3); // SFX_SYMBOL
@@ -489,11 +489,13 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             GROUP_SEPARATOR = q.GetString(5); // GROUP_SEPARATOR
             UNIT_NAME = q.GetString(6); // UNIT_NAME
             CENT_NAME = q.GetString(7); // CENT_NAME
-            SCALE = q.GetInt(8); // SCALE
+            SCALE = q.GetInt64(8); // SCALE
             BASECONVRATE = q.GetDouble(9); // BASECONVRATE
             CURRENCY_SYMBOL = q.GetString(10); // CURRENCY_SYMBOL
             CURRENCY_TYPE = q.GetString(11); // CURRENCY_TYPE
         }
+
+        Data(const Data& other) = default;
 
         Data& operator=(const Data& other)
         {
@@ -515,7 +517,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         }
 
         template<typename C>
-        bool match(const C &c) const
+        bool match(const C &) const
         {
             return false;
         }
@@ -597,7 +599,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         void as_json(PrettyWriter<StringBuffer>& json_writer) const
         {
             json_writer.Key("CURRENCYID");
-            json_writer.Int(this->CURRENCYID);
+            json_writer.Int64(this->CURRENCYID.GetValue());
             json_writer.Key("CURRENCYNAME");
             json_writer.String(this->CURRENCYNAME.utf8_str());
             json_writer.Key("PFX_SYMBOL");
@@ -613,7 +615,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             json_writer.Key("CENT_NAME");
             json_writer.String(this->CENT_NAME.utf8_str());
             json_writer.Key("SCALE");
-            json_writer.Int(this->SCALE);
+            json_writer.Int64(this->SCALE.GetValue());
             json_writer.Key("BASECONVRATE");
             json_writer.Double(this->BASECONVRATE);
             json_writer.Key("CURRENCY_SYMBOL");
@@ -625,7 +627,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         row_t to_row_t() const
         {
             row_t row;
-            row(L"CURRENCYID") = CURRENCYID;
+            row(L"CURRENCYID") = CURRENCYID.GetValue();
             row(L"CURRENCYNAME") = CURRENCYNAME;
             row(L"PFX_SYMBOL") = PFX_SYMBOL;
             row(L"SFX_SYMBOL") = SFX_SYMBOL;
@@ -633,7 +635,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             row(L"GROUP_SEPARATOR") = GROUP_SEPARATOR;
             row(L"UNIT_NAME") = UNIT_NAME;
             row(L"CENT_NAME") = CENT_NAME;
-            row(L"SCALE") = SCALE;
+            row(L"SCALE") = SCALE.GetValue();
             row(L"BASECONVRATE") = BASECONVRATE;
             row(L"CURRENCY_SYMBOL") = CURRENCY_SYMBOL;
             row(L"CURRENCY_TYPE") = CURRENCY_TYPE;
@@ -642,7 +644,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
 
         void to_template(html_template& t) const
         {
-            t(L"CURRENCYID") = CURRENCYID;
+            t(L"CURRENCYID") = CURRENCYID.GetValue();
             t(L"CURRENCYNAME") = CURRENCYNAME;
             t(L"PFX_SYMBOL") = PFX_SYMBOL;
             t(L"SFX_SYMBOL") = SFX_SYMBOL;
@@ -650,7 +652,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             t(L"GROUP_SEPARATOR") = GROUP_SEPARATOR;
             t(L"UNIT_NAME") = UNIT_NAME;
             t(L"CENT_NAME") = CENT_NAME;
-            t(L"SCALE") = SCALE;
+            t(L"SCALE") = SCALE.GetValue();
             t(L"BASECONVRATE") = BASECONVRATE;
             t(L"CURRENCY_SYMBOL") = CURRENCY_SYMBOL;
             t(L"CURRENCY_TYPE") = CURRENCY_TYPE;
@@ -729,7 +731,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
         wxString sql = wxEmptyString;
         if (entity->id() <= 0) //  new & insert
         {
-            sql = "INSERT INTO CURRENCYFORMATS_V1(CURRENCYNAME, PFX_SYMBOL, SFX_SYMBOL, DECIMAL_POINT, GROUP_SEPARATOR, UNIT_NAME, CENT_NAME, SCALE, BASECONVRATE, CURRENCY_SYMBOL, CURRENCY_TYPE) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO CURRENCYFORMATS_V1(CURRENCYNAME, PFX_SYMBOL, SFX_SYMBOL, DECIMAL_POINT, GROUP_SEPARATOR, UNIT_NAME, CENT_NAME, SCALE, BASECONVRATE, CURRENCY_SYMBOL, CURRENCY_TYPE, CURRENCYID) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
         else
         {
@@ -751,8 +753,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
             stmt.Bind(9, entity->BASECONVRATE);
             stmt.Bind(10, entity->CURRENCY_SYMBOL);
             stmt.Bind(11, entity->CURRENCY_TYPE);
-            if (entity->id() > 0)
-                stmt.Bind(12, entity->CURRENCYID);
+            stmt.Bind(12, entity->id() > 0 ? entity->CURRENCYID : newId());
 
             stmt.ExecuteUpdate();
             stmt.Finalize();
@@ -775,14 +776,14 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
 
         if (entity->id() <= 0)
         {
-            entity->id((db->GetLastRowId()).ToLong());
+            entity->id(db->GetLastRowId());
             index_by_id_.insert(std::make_pair(entity->id(), entity));
         }
         return true;
     }
 
     /** Remove the Data record from the database and the memory table (cache) */
-    bool remove(const int id, wxSQLite3Database* db)
+    bool remove(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) return false;
         try
@@ -853,7 +854,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
     * Search the memory table (Cache) for the data record.
     * If not found in memory, search the database and update the cache.
     */
-    Self::Data* get(const int id, wxSQLite3Database* db)
+    Self::Data* get(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {
@@ -901,7 +902,7 @@ struct DB_Table_CURRENCYFORMATS_V1 : public DB_Table
     /**
     * Search the database for the data record, bypassing the cache.
     */
-    Self::Data* get_record(const int id, wxSQLite3Database* db)
+    Self::Data* get_record(const int64 id, wxSQLite3Database* db)
     {
         if (id <= 0) 
         {

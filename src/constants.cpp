@@ -159,6 +159,7 @@ const wxString mmex::weblink::GitHub         = "https://github.com/moneymanagere
 const wxString mmex::weblink::GitHubLogin    = "https://github.com/login";
 const wxString mmex::weblink::YouTube        = "https://www.youtube.com/user/moneymanagerex";
 const wxString mmex::weblink::Slack          = "https://moneymanagerex.slack.com/"; //"http://slack.moneymanagerex.org/";
+const wxString mmex::weblink::AppleAppStore  = "https://iOS.moneymanagerex.org/";
 const wxString mmex::weblink::GooglePlay     = "https://android.moneymanagerex.org/";
 const wxString mmex::weblink::WebApp         = "https://github.com/moneymanagerex/web-money-manager-ex";
 const wxString mmex::weblink::Chiark         = "https://www.chiark.greenend.org.uk/~sgtatham/bugs.html";
@@ -190,21 +191,6 @@ const wxString INIDB_USE_ORG_DATE_DUPLICATE = "USEORIGDATEONDUPLICATE";
 const wxString INIDB_SEND_USAGE_STATS = "SENDUSAGESTATS";
 const wxString INIDB_CHECK_NEWS = "CHECKNEWS";
 
-const wxString VIEW_TRANS_FILTER_DIALOG_STR  = wxTRANSLATE("View Transaction Report...");
-const wxString VIEW_TRANS_ALL_STR            = wxTRANSLATE("View All Transactions");
-const wxString VIEW_TRANS_TODAY_STR          = wxTRANSLATE("View Today");
-const wxString VIEW_TRANS_CURRENT_MONTH_STR  = wxTRANSLATE("View Current Month");
-const wxString VIEW_TRANS_LAST_30_DAYS_STR   = wxTRANSLATE("View Last 30 days");
-const wxString VIEW_TRANS_LAST_90_DAYS_STR   = wxTRANSLATE("View Last 90 days");
-const wxString VIEW_TRANS_LAST_MONTH_STR     = wxTRANSLATE("View Last Month");
-const wxString VIEW_TRANS_LAST_3MONTHS_STR   = wxTRANSLATE("View Last 3 Months");
-const wxString VIEW_TRANS_LAST_12MONTHS_STR  = wxTRANSLATE("View Last 12 Months");
-const wxString VIEW_TRANS_CURRENT_YEAR_STR   = wxTRANSLATE("View Current Year");
-const wxString VIEW_TRANS_CRRNT_FIN_YEAR_STR = wxTRANSLATE("View Current Financial Year");
-const wxString VIEW_TRANS_LAST_YEAR_STR      = wxTRANSLATE("View Last Year");
-const wxString VIEW_TRANS_LAST_FIN_YEAR_STR  = wxTRANSLATE("View Last Financial Year");
-const wxString VIEW_TRANS_SINCE_STATEMENT_STR = wxTRANSLATE("View Since Statement Date");
-
 const wxString VIEW_ACCOUNTS_ALL_STR = wxTRANSLATE("ALL");
 const wxString VIEW_ACCOUNTS_OPEN_STR = wxTRANSLATE("Open");
 const wxString VIEW_ACCOUNTS_CLOSED_STR = wxTRANSLATE("Closed");
@@ -229,6 +215,7 @@ const wxString ATTACHMENTS_FOLDER_APPDATA = "%APPDATA%";
 
 const wxString INIDB_NEWS_LAST_READ_DATE = "NEWS_LAST_READ_DATE";
 
+const wxDateTime DATE_MAX = wxDateTime(32503679999).ToUTC() /* Dec 31, 2999 23:59:59 UTC*/;
 
 const wxString g_fiat_curr()
 {

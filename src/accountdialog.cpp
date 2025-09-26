@@ -418,7 +418,7 @@ void mmNewAcctDialog::OnCurrency(wxCommandEvent& /*event*/)
 
 void mmNewAcctDialog::OnAttachments(wxCommandEvent& /*event*/)
 {
-    wxString RefType = Model_Attachment::reftype_desc(Model_Attachment::BANKACCOUNT);
+    wxString RefType = Model_Attachment::REFTYPE_STR_BANKACCOUNT;
     mmAttachmentDialog dlg(this, RefType, m_account->ACCOUNTID);
     dlg.ShowModal();
 }
@@ -448,7 +448,7 @@ void mmNewAcctDialog::OnCustonImage(wxCommandEvent& event)
     int selectedImage = (event.GetId() - wxID_HIGHEST) - img::LAST_NAVTREE_PNG + 1;
     int image_id = Option::instance().AccountImageId(this->m_account->ACCOUNTID, true);
 
-    Model_Infotable::instance().Set(wxString::Format("ACC_IMAGE_ID_%i", this->m_account->ACCOUNTID)
+    Model_Infotable::instance().Set(wxString::Format("ACC_IMAGE_ID_%lld", this->m_account->ACCOUNTID)
         , selectedImage);
     if (selectedImage != 0)
         image_id = selectedImage + img::LAST_NAVTREE_PNG - 1;
@@ -512,7 +512,7 @@ void mmNewAcctDialog::OnOk(wxCommandEvent& /*event*/)
 
     wxString openingDate = m_initdate_ctrl->GetValue().FormatISODate();
     if (openingDate > wxDate::Today().FormatISODate())
-        return mmErrorDialogs::ToolTip4Object(m_initdate_ctrl, _("Opening date cannot be in the future"), _("Invalid Date"));
+        return mmErrorDialogs::ToolTip4Object(m_initdate_ctrl, _("Opening date is unable to be in the future"), _("Invalid Date"));
 
     if (this->m_account)
     {

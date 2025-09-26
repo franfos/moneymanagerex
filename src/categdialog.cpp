@@ -82,7 +82,7 @@ mmCategDialog::mmCategDialog()
 
 mmCategDialog::mmCategDialog(wxWindow* parent
     , bool bIsSelection
-    , int category_id)
+    , int64 category_id)
 {
     // Initialize fields in constructor
     m_categ_id = category_id;
@@ -162,7 +162,7 @@ bool mmCategDialog::AppendSubcategoryItems(wxTreeItemId parent, const Model_Cate
     bool catDisplayed = false;
     for (auto& subcat : m_categ_children[category->CATEGID]) {
         // Check if the subcategory should be shown
-        bool subcatDisplayed = (show_hidden_categs || subcat.ACTIVE || subcat.CATEGID == m_init_selected_categ_id) && Model_Category::full_name(subcat.CATEGID).Lower().Matches(m_maskStr + "*");
+        bool subcatDisplayed = (show_hidden_categs || subcat.ACTIVE.GetValue() || subcat.CATEGID == m_init_selected_categ_id) && Model_Category::full_name(subcat.CATEGID).Lower().Matches(m_maskStr + "*");
         // Append it to get the item ID
         wxTreeItemId newId = m_treeCtrl->AppendItem(parent, subcat.CATEGNAME);
         // Check if any subcategories are not filtered out
@@ -320,7 +320,7 @@ void mmCategDialog::CreateControls()
 
     m_buttonDelete = new wxButton(buttonsPanel, wxID_REMOVE, _("&Delete "));
     itemBoxSizer66->Add(m_buttonDelete, g_flagsH);
-    mmToolTip(m_buttonDelete, _("Delete an existing category. The category cannot be used by existing transactions."));
+    mmToolTip(m_buttonDelete, _("Delete an existing category. The category is unable to be used by existing transactions."));
 
     wxStdDialogButtonSizer* itemBoxSizer9 = new wxStdDialogButtonSizer;
     buttonsSizer->Add(itemBoxSizer9, wxSizerFlags(g_flagsV).Border(wxALL, 0).Center());
@@ -409,7 +409,7 @@ void mmCategDialog::OnBeginDrag(wxTreeEvent& event)
 void mmCategDialog::OnEndDrag(wxTreeEvent& event)
 {
     auto destItem = event.GetItem();
-    int categID = -1;
+    int64 categID = -1;
 
     if (destItem != root_) {
         Model_Category::Data* newParent = dynamic_cast<mmTreeItemCateg*>(m_treeCtrl->GetItemData(destItem))->getCategData();
@@ -424,7 +424,7 @@ void mmCategDialog::OnEndDrag(wxTreeEvent& event)
 
     if (!Model_Category::instance().find(Model_Category::CATEGNAME(sourceCat->CATEGNAME), Model_Category::PARENTID(categID)).empty() && sourceCat->PARENTID != categID)
     {
-        wxMessageBox(_("You cannot move a subcategory to a category that already has a subcategory with that name. Consider renaming before moving.")
+        wxMessageBox(_("Unable to move a subcategory to a category that already has a subcategory with that name. Consider renaming before moving.")
             , _("A subcategory with this name already exists")
             , wxOK | wxICON_ERROR);
         return;
@@ -436,7 +436,7 @@ void mmCategDialog::OnEndDrag(wxTreeEvent& event)
         if (subcat.PARENTID == sourceCat->CATEGID) subtree_root = subcat.CATEGNAME;
         if (subcat.CATEGID == categID)
         {
-            wxMessageBox(wxString::Format("You cannot move a category to one of its own descendants.\n\nConsider first relocating subcategory %s to move the subtree.", subtree_root)
+            wxMessageBox(wxString::Format("Unable to move a category to one of its own descendants.\n\nConsider first relocating subcategory %s to move the subtree.", subtree_root)
                 , _("Target category is a descendant")
                 , wxOK | wxICON_ERROR);
             return;
@@ -472,7 +472,7 @@ void mmCategDialog::showCategDialogDeleteError(bool category)
         deleteCategoryErrMsg << "\n\n" << _("Tip: Change all transactions using this Subcategory to\n"
             "another Category using the merge command:");
 
-    deleteCategoryErrMsg << "\n\n" << wxGetTranslation(wxString::FromUTF8(wxTRANSLATE("Tools → Merge → Categories")));
+    deleteCategoryErrMsg << "\n\n" << _u("Tools → Merge → Categories");
 
     wxMessageBox(deleteCategoryErrMsg, _("Category Manager: Delete Error"), wxOK | wxICON_ERROR);
 }
@@ -508,7 +508,7 @@ void mmCategDialog::mmDoDeleteSelectedCategory()
             Model_Splittransaction::instance().Savepoint();
             Model_Attachment::instance().Savepoint();
             Model_CustomFieldData::instance().Savepoint();
-            const wxString& RefType = Model_Attachment::reftype_desc(Model_Attachment::TRANSACTION);
+            const wxString& RefType = Model_Attachment::REFTYPE_STR_TRANSACTION;
             for (auto& split : splits) {
                 Model_Checking::instance().remove(split.TRANSID);
                 mmAttachmentManage::DeleteAllAttachments(RefType, split.TRANSID);
@@ -635,7 +635,7 @@ void mmCategDialog::OnEdit(wxCommandEvent& /*event*/)
     fillControls();
 }
 
-wxTreeItemId mmCategDialog::getTreeItemFor(const wxTreeItemId& itemID, const wxString& itemText, const int parentid)
+wxTreeItemId mmCategDialog::getTreeItemFor(const wxTreeItemId& itemID, const wxString& itemText, const int64 parentid)
 {
     wxTreeItemIdValue treeDummyValue;
 
@@ -651,7 +651,7 @@ wxTreeItemId mmCategDialog::getTreeItemFor(const wxTreeItemId& itemID, const wxS
     return catID;
 }
 
-void mmCategDialog::setTreeSelection(int category_id)
+void mmCategDialog::setTreeSelection(int64 category_id)
 {
     Model_Category::Data* category = Model_Category::instance().get(category_id);
     if (category)
@@ -661,7 +661,7 @@ void mmCategDialog::setTreeSelection(int category_id)
     m_categ_id = category_id;   
 }
 
-void mmCategDialog::setTreeSelection(const wxString& catName, const int parentid)
+void mmCategDialog::setTreeSelection(const wxString& catName, const int64 parentid)
 {
     if (!catName.IsEmpty())
     {
@@ -814,7 +814,7 @@ void mmCategDialog::OnItemCollapseOrExpand(wxTreeEvent& event)
     event.Skip();
 }
 
-bool mmCategDialog::categShowStatus(int categId)
+bool mmCategDialog::categShowStatus(int64 categId)
 {
     if (Model_Category::is_hidden(categId))
         return false;
