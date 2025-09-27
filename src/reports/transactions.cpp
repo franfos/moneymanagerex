@@ -43,25 +43,24 @@ mmReportTransactions::~mmReportTransactions()
         m_transDialog->Destroy();
 }
 
-void mmReportTransactions::displayTotals(std::map<int64, double> total, std::map<int64, double> total_in_base_curr, int noOfCols)
+void mmReportTransactions::displayTotals(const std::map<int64, double>& total, std::map<int64, double>& total_in_base_curr, int noOfCols)
 {
     double grand_total = 0;
-    for (const auto& curr_total : total)
+    for (const auto& [curr_id, curr_total]: total)
     {
-        const auto curr = Model_Currency::instance().get(curr_total.first);
+        const auto curr = Model_Currency::instance().get(curr_id);
         const bool isBaseCurr = (curr->CURRENCY_SYMBOL == Model_Currency::GetBaseCurrency()->CURRENCY_SYMBOL);
-        grand_total += total_in_base_curr[curr_total.first];
+        grand_total += total_in_base_curr[curr_id];
         if (total.size() > 1 || !isBaseCurr)
         {
-            const wxString totalStr_curr = isBaseCurr ? "" : Model_Currency::toCurrency(curr_total.second, curr);
-            const wxString totalStr = Model_Currency::toCurrency(total_in_base_curr[curr_total.first], Model_Currency::GetBaseCurrency());
-            const std::vector<wxString> v{ totalStr_curr,  totalStr };
-            hb.addTotalRow(curr->CURRENCY_SYMBOL, noOfCols, v);
+            const wxString totalStr_curr = isBaseCurr ? "" : Model_Currency::toCurrency(curr_total, curr);
+            const wxString totalStr = Model_Currency::toCurrency(total_in_base_curr[curr_id], Model_Currency::GetBaseCurrency());
+            hb.addTotalRow(curr->CURRENCY_SYMBOL, noOfCols, { totalStr_curr,  totalStr });
         }
     }
     const wxString totalStr = Model_Currency::toCurrency(grand_total, Model_Currency::GetBaseCurrency());
     const std::vector<wxString> v{ "", totalStr };
-    hb.addTotalRow(_("Grand Total:"), noOfCols, v);
+    hb.addTotalRow(_t("Grand Total:"), noOfCols, v);
 }
 
 void mmReportTransactions::UDFCFormatHelper(Model_CustomField::TYPE_ID type, int64 ref, wxString data, double val, int scale)
@@ -84,7 +83,7 @@ wxString mmReportTransactions::getHTMLText()
     Run(m_transDialog);
 
     wxArrayInt64 selected_accounts = m_transDialog->mmGetAccountsID();
-    wxString accounts_label = _("All Accounts");
+    wxString accounts_label = _t("All Accounts");
     bool allAccounts = true;
     if (m_transDialog->mmIsAccountChecked() && !m_transDialog->mmGetAccountsID().empty()) {
         accounts_label.clear();
@@ -123,10 +122,10 @@ table {
     end.ParseISODate(m_transDialog->mmGetEndDate());
     hb.DisplayDateHeading(start, end
         , m_transDialog->mmIsRangeChecked() || m_transDialog->mmIsDateRangeChecked());
-    hb.DisplayFooter(_("Accounts: ") + accounts_label);
+    hb.DisplayFooter(_t("Accounts: ") + accounts_label);
 
     m_noOfCols = (m_transDialog->mmIsHideColumnsChecked()) ? m_transDialog->mmGetHideColumnsID().GetCount() : 11;
-    const wxString& AttRefType = Model_Attachment::REFTYPE_STR_TRANSACTION;
+    const wxString& AttRefType = Model_Checking::refTypeName;
     const int groupBy = m_transDialog->mmGetGroupBy();
     const int chart = m_transDialog->mmGetChart();
     wxString lastSortLabel = "";
@@ -139,7 +138,7 @@ table {
     std::map<int64, double> grand_total_in_base_curr_extrans; //Grand - Store transactions amount daily converted to base currency - excluding TRANSFERS
     std::map<wxString, double> values_chart; // Store grouped values for chart
 
-    const wxString refType = Model_Attachment::REFTYPE_STR_TRANSACTION;
+    const wxString refType = Model_Checking::refTypeName;
     static wxArrayString udfc_fields = Model_CustomField::UDFC_FIELDS();
     Model_CustomField::TYPE_ID udfc_type[5];
     int udfc_scale[5];
@@ -189,7 +188,7 @@ table {
                 if (chart > -1)
                 {
                     double value_chart = std::accumulate(total_in_base_curr.begin(), total_in_base_curr.end(), static_cast<double>(0),
-                                                         [](const double previous, decltype(*total_in_base_curr.begin()) p) { return previous + p.second; });
+                                                         [](double previous, const auto& p) { return previous + p.second; });
                     values_chart[lastSortLabel] += value_chart;
                 }
                 total.clear();
@@ -202,34 +201,34 @@ table {
             hb.startThead();
             hb.startTableRow();
             if (showColumnById(mmFilterTransactionsDialog::COL_ID))
-                hb.addTableHeaderCell(_("ID"), "ID text-right");
+                hb.addTableHeaderCell(_t("ID"), "ID text-right");
             if (showColumnById(mmFilterTransactionsDialog::COL_COLOR))
-                hb.addTableHeaderCell(_("Color"), "Color text-center");
+                hb.addTableHeaderCell(_t("Color"), "Color text-center");
             if (showColumnById(mmFilterTransactionsDialog::COL_DATE))
-                hb.addTableHeaderCell(_("Date"), "Date");
+                hb.addTableHeaderCell(_t("Date"), "Date");
             if (showColumnById(mmFilterTransactionsDialog::COL_TIME))
-                hb.addTableHeaderCell(_("Time"), "Time");
+                hb.addTableHeaderCell(_t("Time"), "Time");
             if (showColumnById(mmFilterTransactionsDialog::COL_NUMBER))
-                hb.addTableHeaderCell(_("Number"), "Number");
+                hb.addTableHeaderCell(_t("Number"), "Number");
             if (showColumnById(mmFilterTransactionsDialog::COL_ACCOUNT))
-                hb.addTableHeaderCell(_("Account"), "Account");
+                hb.addTableHeaderCell(_t("Account"), "Account");
             if (showColumnById(mmFilterTransactionsDialog::COL_PAYEE))
-                hb.addTableHeaderCell(_("Payee"), "Payee");
+                hb.addTableHeaderCell(_t("Payee"), "Payee");
             if (showColumnById(mmFilterTransactionsDialog::COL_STATUS))
-                hb.addTableHeaderCell(_("Status"), "Status text-center");
+                hb.addTableHeaderCell(_t("Status"), "Status text-center");
             if (showColumnById(mmFilterTransactionsDialog::COL_CATEGORY))
-                hb.addTableHeaderCell(_("Category"), "Category");
+                hb.addTableHeaderCell(_t("Category"), "Category");
             if (showColumnById(mmFilterTransactionsDialog::COL_TAGS))
-                hb.addTableHeaderCell(_("Tags"), "Tags");
+                hb.addTableHeaderCell(_t("Tags"), "Tags");
             if (showColumnById(mmFilterTransactionsDialog::COL_TYPE))
-                hb.addTableHeaderCell(_("Type"), "Type");
+                hb.addTableHeaderCell(_t("Type"), "Type");
             if (showColumnById(mmFilterTransactionsDialog::COL_AMOUNT))
-                hb.addTableHeaderCell(_("Amount"), "Amount text-right");
+                hb.addTableHeaderCell(_t("Amount"), "Amount text-right");
             if (showColumnById(mmFilterTransactionsDialog::COL_RATE))
-                hb.addTableHeaderCell(_("FX Rate"), "Rate text-right");
+                hb.addTableHeaderCell(_t("FX Rate"), "Rate text-right");
             if (showColumnById(mmFilterTransactionsDialog::COL_NOTES))
-                hb.addTableHeaderCell(_("Notes"), "Notes");
-            const auto& ref_type = Model_Attachment::REFTYPE_STR_TRANSACTION;
+                hb.addTableHeaderCell(_t("Notes"), "Notes");
+            const auto& ref_type = Model_Checking::refTypeName;
             int colNo = mmFilterTransactionsDialog::COL_UDFC01;
             for (const auto& udfc_entry : Model_CustomField::UDFC_FIELDS())
             {
@@ -269,7 +268,7 @@ table {
         bool is_time_used = Option::instance().UseTransDateTime();
         const wxString mask = is_time_used ? "%Y-%m-%dT%H:%M:%S" : "%Y-%m-%d";
 
-        auto custom_fields_data = Model_CustomFieldData::instance().get_all(Model_Attachment::REFTYPE_ID_TRANSACTION);
+        auto custom_fields_data = Model_CustomFieldData::instance().get_all(Model_Checking::refTypeName);
         while (noOfTrans--)
         {
             hb.startTableRow();
@@ -423,8 +422,8 @@ table {
         displayTotals(total, total_in_base_curr, m_noOfCols);
         if (chart > -1)
         {
-            double value_chart = std::accumulate(total_in_base_curr.begin(), total_in_base_curr.end(), 0,
-                                                 [](const double previous, decltype(*total_in_base_curr.begin()) p) { return previous + p.second; });
+            double value_chart = std::accumulate(total_in_base_curr.begin(), total_in_base_curr.end(), 0.0,
+                                                 [](double previous, const auto& p) { return previous + p.second; });
             values_chart[lastSortLabel] += value_chart;
         }
     }
@@ -442,7 +441,7 @@ table {
             {
                 hb.startTableRow();
                 {
-                    hb.addTableHeaderCell(_("All Transactions: Withdrawals, Deposits, and Transfers"));
+                    hb.addTableHeaderCell(_t("All Transactions: Withdrawals, Deposits, and Transfers"));
                     hb.addTableHeaderCell("");
                     hb.addTableHeaderCell("");
                 }
@@ -460,7 +459,7 @@ table {
             {
                 hb.startTableRow();
                 {
-                    hb.addTableHeaderCell(_("All Transactions excluding Transfers"));
+                    hb.addTableHeaderCell(_t("All Transactions excluding Transfers"));
                     hb.addTableHeaderCell("");
                     hb.addTableHeaderCell("");
                 }
@@ -482,10 +481,10 @@ table {
     {
         GraphData gd;
         GraphSeries gs;
-        for (const auto& kv : values_chart)
+        for (const auto& [k, v] : values_chart)
         {
-            gd.labels.push_back(kv.first);
-            gs.values.push_back(kv.second);
+            gd.labels.push_back(k);
+            gs.values.push_back(v);
         }
         gd.series.push_back(gs);
         //gd.colors = { mmThemeMetaColour(meta::COLOR_REPORT_DELTA) };
@@ -501,7 +500,7 @@ table {
                 {
                     hb.startTableRow();
                     {
-                        hb.addTableHeaderCell(_("Statistics"));
+                        hb.addTableHeaderCell(_t("Statistics"));
                         hb.addTableHeaderCell("");
                     }
                     hb.endTableRow();
@@ -511,24 +510,22 @@ table {
                 {
                     auto statsMin = std::min_element
                     (values_chart.begin(), values_chart.end(),
-                    [](const std::pair<wxString, double>& p1, const std::pair<wxString, double>& p2) {
-                            return p1.second < p2.second;
-                        }
-                    );
+                    [](const auto& p1, const auto& p2) {
+                        return p1.second < p2.second;
+                    });
                     auto statsMax = std::max_element
                     (values_chart.begin(), values_chart.end(),
-                    [](const std::pair<wxString, double>& p1, const std::pair<wxString, double>& p2) {
-                            return p1.second < p2.second;
-                        }
-                    );
+                    [](const auto& p1, const auto& p2) {
+                        return p1.second < p2.second;
+                    });
                     double statsAvg = std::accumulate(values_chart.begin(), values_chart.end(), 0,
-                        [](const double previous, decltype(*values_chart.begin()) p) { return previous + p.second; });
+                        [](double previous, const auto & p) { return previous + p.second; });
                     statsAvg = values_chart.size() > 0 ? statsAvg / values_chart.size() : 0;
-                    hb.addTotalRow(_("Minimum") + " >> " + statsMin->first, 2,
+                    hb.addTotalRow(_t("Minimum") + " >> " + statsMin->first, 2,
                         std::vector<wxString>{ Model_Currency::toCurrency(statsMin->second, Model_Currency::GetBaseCurrency()) });
-                    hb.addTotalRow(_("Maximum") + " >> " + statsMax->first, 2,
+                    hb.addTotalRow(_t("Maximum") + " >> " + statsMax->first, 2,
                         std::vector<wxString>{ Model_Currency::toCurrency(statsMax->second, Model_Currency::GetBaseCurrency()) });
-                    hb.addTotalRow(_("Average"), 2,
+                    hb.addTotalRow(_t("Average"), 2,
                         std::vector<wxString>{ Model_Currency::toCurrency(statsAvg, Model_Currency::GetBaseCurrency()) });
                 }
                 hb.endTbody();
@@ -556,9 +553,9 @@ void mmReportTransactions::Run(wxSharedPtr<mmFilterTransactionsDialog>& dlg)
 {
     trans_.clear();
     const auto splits = Model_Splittransaction::instance().get_all();
-    const auto tags = Model_Taglink::instance().get_all(Model_Attachment::REFTYPE_STR_TRANSACTION);
+    const auto tags = Model_Taglink::instance().get_all(Model_Checking::refTypeName);
     bool combine_splits = dlg.get()->mmIsCombineSplitsChecked();
-    const wxString splitRefType = Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT;
+    const wxString splitRefType = Model_Splittransaction::refTypeName;
     for (const auto& tran : Model_Checking::instance().all())
     {
         Model_Checking::Full_Data full_tran(tran, splits, tags);
@@ -590,8 +587,8 @@ void mmReportTransactions::Run(wxSharedPtr<mmFilterTransactionsDialog>& dlg)
                     full_tran.NOTES.Append((tran.NOTES.IsEmpty() ? "" : " ") + split.NOTES);
 
                     wxString tagnames;
-                    for (const auto& tag : Model_Taglink::instance().get(splitRefType, split.SPLITTRANSID))
-                        tagnames.Append(tag.first + " ");
+                    for (const auto& [tag_name, _] : Model_Taglink::instance().get(splitRefType, split.SPLITTRANSID))
+                        tagnames.Append(tag_name + " ");
                     if (!tagnames.IsEmpty())
                         full_tran.TAGNAMES.Append((full_tran.TAGNAMES.IsEmpty() ? "" : ", ") + tagnames.Trim());
 

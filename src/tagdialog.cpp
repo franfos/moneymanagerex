@@ -22,7 +22,11 @@
 #include "constants.h"
 #include "paths.h"
 #include "util.h"
+#include "model/Model_Infotable.h"
+#include "model/Model_Checking.h"
+#include "model/Model_Splittransaction.h"
 #include "model/Model_Tag.h"
+#include "model/Model_Taglink.h"
 
 wxIMPLEMENT_DYNAMIC_CLASS(mmTagDialog, wxDialog);
 
@@ -43,7 +47,7 @@ mmTagDialog::mmTagDialog() : isSelection_(false)
 
 mmTagDialog::~mmTagDialog()
 {
-    Model_Infotable::instance().Set("TAG_DIALOG_SIZE", GetSize());
+    Model_Infotable::instance().setSize("TAG_DIALOG_SIZE", GetSize());
 }
 
 mmTagDialog::mmTagDialog(wxWindow* parent, bool isSelection, const wxArrayString& selectedTags) : isSelection_(isSelection), selectedTags_(selectedTags)
@@ -110,7 +114,7 @@ void mmTagDialog::CreateControls()
     searchPanel->SetSizer(search_sizer);
 
     searchCtrl_ = new wxSearchCtrl(searchPanel, wxID_FIND);
-    search_sizer->Add(new wxStaticText(searchPanel, wxID_STATIC, _("Search")), g_flagsH);
+    search_sizer->Add(new wxStaticText(searchPanel, wxID_STATIC, _t("Search")), g_flagsH);
     search_sizer->Add(searchCtrl_, g_flagsExpand);
 
     wxPanel* buttonsPanel = new wxPanel(this, wxID_ANY);
@@ -121,25 +125,25 @@ void mmTagDialog::CreateControls()
     wxStdDialogButtonSizer* editButtonSizer = new wxStdDialogButtonSizer;
     buttonsSizer->Add(editButtonSizer, wxSizerFlags(g_flagsV).Border(wxALL, 0).Center());
 
-    buttonAdd_ = new wxButton(buttonsPanel, wxID_ADD, _("&Add "));
+    buttonAdd_ = new wxButton(buttonsPanel, wxID_ADD, _t("&Add "));
     editButtonSizer->Add(buttonAdd_, g_flagsH);
-    mmToolTip(buttonAdd_, _("Add a new tag"));
+    mmToolTip(buttonAdd_, _t("Add a new tag"));
 
-    buttonEdit_ = new wxButton(buttonsPanel, wxID_EDIT, _("&Edit "));
+    buttonEdit_ = new wxButton(buttonsPanel, wxID_EDIT, _t("&Edit "));
     editButtonSizer->Add(buttonEdit_, g_flagsH);
     buttonEdit_->Enable(false);
-    mmToolTip(buttonEdit_, _("Edit the name of an existing tag"));
+    mmToolTip(buttonEdit_, _t("Edit the name of an existing tag"));
 
-    buttonDelete_ = new wxButton(buttonsPanel, wxID_REMOVE, _("&Delete "));
+    buttonDelete_ = new wxButton(buttonsPanel, wxID_REMOVE, _t("&Delete "));
     editButtonSizer->Add(buttonDelete_, g_flagsH);
     buttonDelete_->Enable(false);
-    mmToolTip(buttonDelete_, _("Delete an existing tag. The tag is unable to be used by existing transactions."));
+    mmToolTip(buttonDelete_, _t("Delete an existing tag. The tag is unable to be used by existing transactions."));
 
     //--------------------------
     wxStdDialogButtonSizer* dlgButtonSizer = new wxStdDialogButtonSizer();
     boxSizer->Add(dlgButtonSizer, wxSizerFlags(g_flagsV).Centre());
 
-    wxButton* itemButton24 = new wxButton(this, wxID_OK, (isSelection_ ? _("Select") : _("&OK ")));
+    wxButton* itemButton24 = new wxButton(this, wxID_OK, (isSelection_ ? _t("Select") : _t("&OK ")));
     dlgButtonSizer->Add(itemButton24, g_flagsH);
 
     wxButton* itemButton25 = new wxButton(this, wxID_CANCEL, wxGetTranslation(isSelection_ ? g_CancelLabel : g_CloseLabel));
@@ -176,15 +180,15 @@ bool mmTagDialog::validateName(const wxString& name)
 {
     if (name == "&" || name == "|")
     {
-        wxString errMsg = _("Invalid tag name");
-        errMsg << "\n\n" << _("Tag names may not be the '&' or '|' characters because these are reserved for filter operators");
-        wxMessageBox(errMsg, _("Tag Manager: Invalid Name"), wxOK | wxICON_ERROR);
+        wxString errMsg = _t("Invalid tag name");
+        errMsg << "\n\n" << _t("Tag names may not be the '&' or '|' characters because these are reserved for filter operators");
+        wxMessageBox(errMsg, _t("Tag Manager: Invalid Name"), wxOK | wxICON_ERROR);
         return false;
     } else if (name.Find(' ') != wxNOT_FOUND)
     {
-        wxString errMsg = _("Name contains tag delimiter.");
-        errMsg << "\n\n" << _("Tag names may not contain the space (' ') character");
-        wxMessageBox(errMsg, _("Tag Manager: Invalid Name"), wxOK | wxICON_ERROR);
+        wxString errMsg = _t("Name contains tag delimiter.");
+        errMsg << "\n\n" << _t("Tag names may not contain the space (' ') character");
+        wxMessageBox(errMsg, _t("Tag Manager: Invalid Name"), wxOK | wxICON_ERROR);
         return false;
     }
     return true;
@@ -203,11 +207,11 @@ void mmTagDialog::OnCancel(wxCommandEvent& WXUNUSED(event))
 
 void mmTagDialog::OnAdd(wxCommandEvent& WXUNUSED(event))
 {
-    wxString prompt_msg = _("Enter the name for the new tag:");
-    wxString text = wxGetTextFromUser(prompt_msg, _("Add Tag"), "");
+    wxString prompt_msg = _t("Enter the name for the new tag:");
+    wxString text = wxGetTextFromUser(prompt_msg, _t("Add Tag"), "");
 
     while (!validateName(text))
-        text = wxGetTextFromUser(prompt_msg, _("Add Tag"), text);
+        text = wxGetTextFromUser(prompt_msg, _t("Add Tag"), text);
 
     if (text.IsEmpty())
         return;
@@ -215,7 +219,7 @@ void mmTagDialog::OnAdd(wxCommandEvent& WXUNUSED(event))
     const auto& tags = Model_Tag::instance().find(Model_Tag::TAGNAME(text));
     if (!tags.empty())
     {
-        wxMessageBox(_("A tag with this name already exists"), _("Tag Manager: Adding Error"), wxOK | wxICON_ERROR);
+        wxMessageBox(_t("A tag with this name already exists"), _t("Tag Manager: Adding Error"), wxOK | wxICON_ERROR);
         return;
     }
 
@@ -238,11 +242,11 @@ void mmTagDialog::OnEdit(wxCommandEvent& WXUNUSED(event))
     if (selections.IsEmpty()) return;
     old_name = tagListBox_->GetString(selections[0]); 
 
-    const wxString msg = wxString::Format(_("Enter a new name for '%s'"), old_name);
-    wxString text = wxGetTextFromUser(msg, _("Edit Tag"), old_name);
+    const wxString msg = wxString::Format(_t("Enter a new name for '%s'"), old_name);
+    wxString text = wxGetTextFromUser(msg, _t("Edit Tag"), old_name);
 
     while (!validateName(text))
-        text = wxGetTextFromUser(msg, _("Edit Tag"), text);
+        text = wxGetTextFromUser(msg, _t("Edit Tag"), text);
 
     if (text.IsEmpty() || old_name == text)
         return;
@@ -250,8 +254,8 @@ void mmTagDialog::OnEdit(wxCommandEvent& WXUNUSED(event))
     Model_Tag::Data* tag = Model_Tag::instance().get(text);
     if (tag)
     {
-        wxString errMsg = _("A tag with this name already exists");
-        wxMessageBox(errMsg, _("Tag Manager: Editing Error"), wxOK | wxICON_ERROR);
+        wxString errMsg = _t("A tag with this name already exists");
+        wxMessageBox(errMsg, _t("Tag Manager: Editing Error"), wxOK | wxICON_ERROR);
         return;
     }
 
@@ -292,13 +296,13 @@ void mmTagDialog::OnDelete(wxCommandEvent& WXUNUSED(event))
         int tag_used = Model_Tag::instance().is_used(tag->TAGID);
         if (tag_used == 1)
         {
-            wxMessageBox(wxString::Format(_("Tag '%s' in use"), tag->TAGNAME), _("Tag Manager: Delete Error"), wxOK | wxICON_ERROR);
+            wxMessageBox(wxString::Format(_t("Tag '%s' in use"), tag->TAGNAME), _t("Tag Manager: Delete Error"), wxOK | wxICON_ERROR);
             continue;
         }
-        wxMessageDialog msgDlg(this, wxString::Format(_("Deleted transactions exist which use tag '%s'."), tag->TAGNAME)
-                + "\n\n" + _("Deleting the tag will also automatically purge the associated deleted transactions.")
-                + "\n\n" + _("Do you wish to continue ?")
-                , _("Confirm Tag Deletion"), wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
+        wxMessageDialog msgDlg(this, wxString::Format(_t("Deleted transactions exist which use tag '%s'."), tag->TAGNAME)
+                + "\n\n" + _t("Deleting the tag will also automatically purge the associated deleted transactions.")
+                + "\n\n" + _t("Do you want to continue?")
+                , _t("Confirm Tag Deletion"), wxYES_NO | wxNO_DEFAULT | wxICON_WARNING);
         
         if (tag_used == 0 || (tag_used == -1 && msgDlg.ShowModal() == wxID_YES))
         {
@@ -306,9 +310,9 @@ void mmTagDialog::OnDelete(wxCommandEvent& WXUNUSED(event))
             for (const auto& link : taglinks)
                 // Taglinks for deleted transactions are either TRANSACTION or TRANSACTIONSPLIT type.
                 // Remove the transactions which will delete all associated tags.
-                if (link.REFTYPE == Model_Attachment::REFTYPE_STR_TRANSACTION)
+                if (link.REFTYPE == Model_Checking::refTypeName)
                     Model_Checking::instance().remove(link.REFID);
-                else if (link.REFTYPE == Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT)
+                else if (link.REFTYPE == Model_Splittransaction::refTypeName)
                     Model_Checking::instance().remove(Model_Splittransaction::instance().get(link.REFID)->TRANSID);
             Model_Tag::instance().remove(tag->TAGID);
             tagList_.Remove(selection);

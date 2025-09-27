@@ -75,7 +75,7 @@ private:
 
     bool Create(wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = wxTRANSLATE("Currency Manager")
+        , const wxString& caption = _n("Currency Manager")
         , const wxString& name = "Organize Currencies"
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
@@ -132,5 +132,3 @@ private:
     bool ConvertHistoryRates(const std::vector<CurrencyHistoryRate>& Bce, std::vector<CurrencyHistoryRate>& ConvertedRate, const wxString& BaseCurrencySymbol);
     bool GetOnlineHistory(const wxString &symbol, wxDateTime begin_date, std::map<wxDateTime, double> &historical_rates, wxString &msg);
 };
-
-

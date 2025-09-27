@@ -1,5 +1,6 @@
 /*******************************************************
  Copyright (C) 2006 Madhan Kanagavel
+ Copyright (C) 2025 Klaus Wich
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -35,7 +36,6 @@ class mmStockDialog : public wxDialog
 public:
     mmStockDialog();
     mmStockDialog(wxWindow* parent
-        , mmGUIFrame* gui_frame
         , Model_Stock::Data* stock
         , int64 accountID
         , const wxString& name = "mmStockDialog"
@@ -84,11 +84,12 @@ private:
     mmTextCtrl* m_current_price_ctrl = nullptr;
     wxBitmapButton* m_bAttachments = nullptr;
     wxListCtrl* m_price_listbox = nullptr;
+    wxButton* m_itemButtonOK = nullptr;
+    wxStaticText* m_date_label = nullptr;
 
     Model_Stock::Data* m_stock = nullptr;
     bool m_edit = false;
     int64 m_account_id = -1;
-    mmGUIFrame* m_gui_frame = nullptr;
     enum
     {
         ID_DPC_STOCK_PDATE = wxID_HIGHEST + 800,

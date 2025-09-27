@@ -1,6 +1,7 @@
 /*******************************************************
 Copyright (C) 2009 VaDiM
 Copyright (C) 2022 Mark Whalley (mark@ipx.co.uk)
+Copyright (C) 2025 Klaus Wich
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -69,30 +70,30 @@ const wxSizerFlags g_flagsExpandBorder1 = wxSizerFlags().Align(wxALIGN_LEFT | wx
 
 const wxString g_CancelLabel =
 #if defined(__APPLE__)
-    wxTRANSLATE("Cancel");
+    _n("Cancel");
 #else
-    wxTRANSLATE("&Cancel ");
+    _n("&Cancel ");
 #endif
 const wxString g_CloseLabel =
 #if defined(__APPLE__)
-    wxTRANSLATE("Close");
+    _n("Close");
 #else
-    wxTRANSLATE("&Close ");
+    _n("&Close ");
 #endif
 const wxString g_OkLabel =
 #if defined(__APPLE__)
-wxTRANSLATE("OK");
+_n("OK");
 #else
-wxTRANSLATE("&OK ");
+_n("&OK ");
 #endif
 
 //bug #5590
-const wxString grm_menu_undo = _("Undo");
-const wxString grm_menu_redo = _("Redo");
-const wxString grm_menu_cut = _("Cut");
-const wxString grm_menu_copy = _("Copy");
-const wxString grm_menu_paste = _("Paste");
-const wxString grm_menu_selall = _("Select All");
+const wxString grm_menu_undo = _t("Undo");
+const wxString grm_menu_redo = _t("Redo");
+const wxString grm_menu_cut = _t("Cut");
+const wxString grm_menu_copy = _t("Copy");
+const wxString grm_menu_paste = _t("Paste");
+const wxString grm_menu_selall = _t("Select All");
 
 //---------------------------------------------------------------------------
 int mmex::MIN_DATAVERSION = 2;
@@ -108,7 +109,7 @@ const wxString mmex::getTitleProgramVersion()
 {
     const wxString architecture =
 #if defined(_WIN64) || defined(__x86_64__)
-        _("64-bit");
+        _t("64-bit");
 #else
         "";
 #endif
@@ -134,7 +135,7 @@ const wxString mmex::weblink::addReferralToURL(const wxString& BaseURL, const wx
     to divide direct access from access through desktop app links
     https://support.google.com/analytics/answer/1033867?hl=en
     */
-    
+
     const wxString url = wxString::Format("%s?utm_campaign=Application_Desktop&utm_source=%s&utm_medium=MMEX_v%s"
         , BaseURL, CampSource, mmex::version::string);
 
@@ -174,39 +175,28 @@ const wxString mmex::weblink::YahooQuotes = "https://query1.finance.yahoo.com/v7
    Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]*/
 const wxString mmex::weblink::YahooQuotesHistory = "https://query1.finance.yahoo.com/v8/finance/chart/%s?%s&fields=currency";
 
-// coincap asset search by symbol and id 
+// coincap asset search by symbol and id
 const wxString mmex::weblink::CoinCapSearch = "http://api.coincap.io/v2/assets?search=%s";
 
 // coincap asset price history, all values in USD
 // Valid intervals: [m1, m5, m15, m30, h1, h2, h6, h12, d1]
 const wxString mmex::weblink::CoinCapHistory = "http://api.coincap.io/v2/assets/%s/history?interval=%s&start=%lld&end=%lld";
 
+const wxString mmex::weblink::GeneralReport = "https://moneymanagerex.org/general-reports/";
+
 /* End namespace weblink */
 
 const wxString LANGUAGE_PARAMETER = "LANGUAGE";
-const wxString INIDB_USE_CURRENCY_HISTORY = "USECURRENCYHISTORY";
 const wxString INIDB_USE_TRANSACTION_SOUND = "USETRANSSOUND";
 const wxString INIDB_USE_ORG_DATE_COPYPASTE = "USEORIGDATEONCOPYPASTE";
 const wxString INIDB_USE_ORG_DATE_DUPLICATE = "USEORIGDATEONDUPLICATE";
+const wxString INIDB_USE_ORG_STATE_DUPLICATE_PASTE = "USEORIGSTATEONDUPLICATEPASTE";
 const wxString INIDB_SEND_USAGE_STATS = "SENDUSAGESTATS";
-const wxString INIDB_CHECK_NEWS = "CHECKNEWS";
 
-const wxString VIEW_ACCOUNTS_ALL_STR = wxTRANSLATE("ALL");
-const wxString VIEW_ACCOUNTS_OPEN_STR = wxTRANSLATE("Open");
-const wxString VIEW_ACCOUNTS_CLOSED_STR = wxTRANSLATE("Closed");
-const wxString VIEW_ACCOUNTS_FAVORITES_STR = wxTRANSLATE("Favorites");
-
-const wxString INIDB_HIDE_SHARE_ACCOUNTS          = "HIDE_SHARE_ACCOUNTS";
-const wxString INIDB_HIDE_DELETED_TRANSACTIONS    = "HIDE_DELETED_TRANSACTIONS";
-const wxString INIDB_BUDGET_FINANCIAL_YEARS       = "BUDGET_FINANCIAL_YEARS";
-const wxString INIDB_BUDGET_INCLUDE_TRANSFERS     = "BUDGET_INCLUDE_TRANSFERS";
-const wxString INIDB_BUDGET_SETUP_WITHOUT_SUMMARY = "BUDGET_SETUP_WITHOUT_SUMMARY";
-const wxString INIDB_BUDGET_SUMMARY_WITHOUT_CATEG = "BUDGET_SUMMARY_WITHOUT_CATEGORIES";
-const wxString INIDB_BUDGET_OVERRIDE              = "BUDGET_OVERRIDE";
-const wxString INIDB_BUDGET_DEDUCT_MONTH_FROM_YEAR = "BUDGET_DEDUCT_MONTH_FROM_YEAR";
-const wxString INIDB_IGNORE_FUTURE_TRANSACTIONS   = "IGNORE_FUTURE_TRANSACTIONS";
-const wxString INIDB_SHOW_TOOLTIPS                = "IGNORE_SHOW_TOOLTIPS";
-const wxString INIDB_SHOW_MONEYTIPS               = "IGNORE_SHOW_MONEYTIPS";
+const wxString VIEW_ACCOUNTS_ALL_STR       = _n("ALL");
+const wxString VIEW_ACCOUNTS_OPEN_STR      = _n("Open");
+const wxString VIEW_ACCOUNTS_CLOSED_STR    = _n("Closed");
+const wxString VIEW_ACCOUNTS_FAVORITES_STR = _n("Favorites");
 
 const wxString ATTACHMENTS_FOLDER_DOCUMENTS = "%DOCUMENTS%";
 const wxString ATTACHMENTS_FOLDER_DATABASE = "%DATABASE%";
@@ -215,6 +205,7 @@ const wxString ATTACHMENTS_FOLDER_APPDATA = "%APPDATA%";
 
 const wxString INIDB_NEWS_LAST_READ_DATE = "NEWS_LAST_READ_DATE";
 
+const wxDateTime DATE_MIN = wxDateTime(static_cast <time_t>(0)) /* Jan 1, 1970 00:00:00 UTC*/;
 const wxDateTime DATE_MAX = wxDateTime(32503679999).ToUTC() /* Dec 31, 2999 23:59:59 UTC*/;
 
 const wxString g_fiat_curr()

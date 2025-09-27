@@ -71,6 +71,9 @@ public:
     static bool is_used(int64 id);
     static bool is_used(const Data* record);
     static bool is_used(const Data& record);
+
+public:
+    static const wxString refTypeName;
 };
 
 #endif // 

@@ -24,11 +24,11 @@
 #include "paths.h"
 #include "platfdep.h"
 #include "util.h"
+#include "daterange2.h"
 
 #include "model/Model_Setting.h"
 #include "model/Model_Usage.h"
 
-#include "../resources/money.xpm"
 #include <wx/cmdline.h>
 #include <wx/display.h>
 #include <wx/fs_arc.h>
@@ -175,7 +175,7 @@ void mmGUIApp::ReportFatalException(wxDebugReport::Context ctx)
 
     if (!report.IsOk())
     {
-        wxSafeShowMessage(mmex::getProgramName(), _("Fatal error occured.\nApplication will be terminated."));
+        wxSafeShowMessage(mmex::getProgramName(), _t("Fatal error occured.\nApplication will be terminated."));
     }
 
     report.AddAll(ctx);
@@ -233,6 +233,8 @@ void mmGUIApp::OnFatalException()
 
 bool OnInitImpl(mmGUIApp* app)
 {
+    bool ok = true;
+
     app->SetAppName(mmex::GetAppName());
 
     app->SetSettingDB(new wxSQLite3Database());
@@ -247,11 +249,16 @@ bool OnInitImpl(mmGUIApp* app)
     app->GetSettingDB()->Open(file_path);
     Model_Setting::instance(app->GetSettingDB());
 
-    Model_Setting::instance().ShrinkUsageTable();
+    Model_Setting::instance().shrinkUsageTable();
     Model_Usage::instance(app->GetSettingDB());
 
     /* Load general MMEX Custom Settings */
-    Option::instance().LoadOptions(false);
+    Option::instance().load(false);
+
+    // checks (only in Debug build)
+#ifndef NDEBUG
+    ok = ok && DateRange2::debug();
+#endif
 
     /* initialize GUI with best language */
     wxTranslations* trans = new wxTranslations;
@@ -266,13 +273,12 @@ bool OnInitImpl(mmGUIApp* app)
 
     wxFileSystem::AddHandler(new wxMemoryFSHandler);
 
-    // Copy files from resources to VFS
+    wxLogDebug("{{{ OnInitImpl(): Copy files from resources to VFS");
     const wxString res_dir = mmex::GetResourceDir().GetPathWithSep();
     wxArrayString files_array;
     wxDir::GetAllFiles(res_dir, &files_array);
     for (const auto& source_file : files_array)
     {
-        wxString data;
         if (wxFileName::FileExists(source_file))
         {
             const auto file_name = wxFileName(source_file).GetFullName();
@@ -284,10 +290,11 @@ bool OnInitImpl(mmGUIApp* app)
             wxMemoryOutputStream memOut(nullptr);
             input.Read(memOut);
             wxStreamBuffer* buffer = memOut.GetOutputStreamBuffer();
-            wxLogDebug("File: %s has been copied to VFS", file_name);
+            wxLogDebug("%s", file_name);
             wxMemoryFSHandler::AddFile(file_name, buffer->GetBufferStart(), buffer->GetBufferSize());
         }
     }
+    wxLogDebug("}}}");
 
 #else
 
@@ -350,10 +357,10 @@ bool OnInitImpl(mmGUIApp* app)
     int defValH = rect.GetHeight() / 4 * 3;
 
     // Load Dimensions of Window, if not found use the 'sensible' values
-    int valX = Model_Setting::instance().GetIntSetting("ORIGINX", defValX);
-    int valY = Model_Setting::instance().GetIntSetting("ORIGINY", defValY);
-    int valW = Model_Setting::instance().GetIntSetting("SIZEW", defValW);
-    int valH = Model_Setting::instance().GetIntSetting("SIZEH", defValH);
+    int valX = Model_Setting::instance().getInt("ORIGINX", defValX);
+    int valY = Model_Setting::instance().getInt("ORIGINY", defValY);
+    int valW = Model_Setting::instance().getInt("SIZEW", defValW);
+    int valH = Model_Setting::instance().getInt("SIZEH", defValH);
 
     // Check if it 'fits' into any of the windows
     // -- 'fit' means either an exact fit or at least 20% of application is on a visible window)
@@ -403,11 +410,10 @@ bool OnInitImpl(mmGUIApp* app)
     }
 
     app->m_frame = new mmGUIFrame(app, mmex::getProgramName(), wxPoint(valX, valY), wxSize(valW, valH));
-
-    bool ok = app->m_frame->Show();
+    ok = ok && app->m_frame->Show();
 
     /* Was App Maximized? */
-    bool isMax = Model_Setting::instance().GetBoolSetting("ISMAXIMIZED", true);
+    bool isMax = Model_Setting::instance().getBool("ISMAXIMIZED", true);
     if (isMax)
         app->m_frame->Maximize(true);
 
@@ -451,19 +457,21 @@ bool mmGUIApp::OnInit()
 
 int mmGUIApp::OnExit()
 {
-    wxLogDebug("OnExit()");
+    wxLogDebug("{{{ mmGUIApp::OnExit()");
+
+    if (m_frame && !m_frame->IsBeingDeleted())
+        m_frame->Destroy();
+
     Model_Usage::Data* usage = Model_Usage::instance().create();
     usage->USAGEDATE = wxDate::Today().FormatISODate();
 
     wxString rj = Model_Usage::instance().To_JSON_String();
-    wxLogDebug("===== mmGUIApp::OnExit ===========================");
     wxLogDebug("RapidJson\n%s", rj);
 
     usage->JSONCONTENT = rj;
     Model_Usage::instance().save(usage);
 
-    if (m_setting_db)
-    {
+    if (m_setting_db) {
         m_setting_db->Close();
         m_setting_db->ShutdownSQLite();
     }
@@ -474,6 +482,7 @@ int mmGUIApp::OnExit()
     // Delete mmex temp folder for current user
     wxFileName::Rmdir(mmex::getTempFolder(), wxPATH_RMDIR_RECURSIVE);
 
+    wxLogDebug("}}}");
     return 0;
 }
 
@@ -483,9 +492,9 @@ int mmGUIApp::OnExit()
 bool findModal(wxWindow* w)
 {
     wxWindowList& children = w->GetChildren();
-    for (wxWindowList::Node* node = children.GetFirst(); node; node = node->GetNext())
+    for ( wxWindowList::compatibility_iterator it = children.GetFirst(); it; it = it->GetNext() )
     {
-        wxWindow* current = static_cast<wxWindow*>(node->GetData());
+        wxWindow* current = static_cast<wxWindow*>(it->GetData());
         wxLogDebug("  Name [%s]", current->GetName());
         if (current->IsKindOf(CLASSINFO(wxDialog)))
             return true;
@@ -502,5 +511,6 @@ bool mmGUIApp::OSXOnShouldTerminate()
     bool modalExists = findModal(GetTopWindow());
     if (!modalExists)
         this->GetTopWindow()->Close();
+    return true;
 }
 #endif

@@ -25,6 +25,7 @@ Copyright (C) 2018 Stefano Giorgio (stef145g)
 #include <wx/log.h>
 #include "db/DB_Table.h"
 #include "singleton.h"
+#include "choices.h"
 
 class wxSQLite3Statement;
 class wxSQLite3Database;
@@ -97,7 +98,42 @@ public:
 
 protected:
     wxSQLite3Database* db_;
+
+public:
+    enum REFTYPE_ID {
+        REFTYPE_ID_TRANSACTION = 0,
+        REFTYPE_ID_STOCK,
+        REFTYPE_ID_ASSET,
+        REFTYPE_ID_BANKACCOUNT,
+        REFTYPE_ID_BILLSDEPOSIT,
+        REFTYPE_ID_PAYEE,
+        REFTYPE_ID_TRANSACTIONSPLIT,
+        REFTYPE_ID_BILLSDEPOSITSPLIT,
+        REFTYPE_ID_size
+    };
+
+    static ChoicesName REFTYPE_CHOICES;
+    static const wxString REFTYPE_NAME_TRANSACTION;
+    static const wxString REFTYPE_NAME_STOCK;
+    static const wxString REFTYPE_NAME_ASSET;
+    static const wxString REFTYPE_NAME_BANKACCOUNT;
+    static const wxString REFTYPE_NAME_BILLSDEPOSIT;
+    static const wxString REFTYPE_NAME_PAYEE;
+    static const wxString REFTYPE_NAME_TRANSACTIONSPLIT;
+    static const wxString REFTYPE_NAME_BILLSDEPOSITSPLIT;
+    static const wxString reftype_name(int id);
+    static int reftype_id(const wxString& name, int default_id = -1);
 };
+
+inline const wxString ModelBase::reftype_name(int id)
+{
+    return REFTYPE_CHOICES.getName(id);
+}
+
+inline int ModelBase::reftype_id(const wxString& name, int default_id)
+{
+    return REFTYPE_CHOICES.findName(name, default_id);
+}
 
 template<class DB_TABLE>
 class Model : public ModelBase, public DB_TABLE

@@ -81,7 +81,7 @@ Model_Category::Data* Model_Category::get(const wxString& name, const wxString& 
             }
         }
     }
-    
+
     return category;
 }
 
@@ -102,7 +102,7 @@ const std::map<wxString, int64> Model_Category::all_categories(bool excludeHidde
     {
         if (excludeHidden && (c.ACTIVE == 0))
             continue;
-        
+
         full_categs[full_name(c.CATEGID)] = c.CATEGID;
     }
     return full_categs;
@@ -142,7 +142,7 @@ const wxString Model_Category::full_name(const Data* category)
 {
     static wxString delimiter;
     if (delimiter.empty()) {
-        delimiter = Model_Infotable::instance().GetStringInfo("CATEG_DELIMITER", ":");
+        delimiter = Model_Infotable::instance().getString("CATEG_DELIMITER", ":");
     }
     if (!category) return "";
     if (category->PARENTID == -1)
@@ -181,7 +181,7 @@ const wxString Model_Category::full_name(int64 category_id, wxString delimiter)
     }
 }
 
-// -- Check if Category should be made available for use. 
+// -- Check if Category should be made available for use.
 //    Hiding a category hides all sub-categories
 
 bool Model_Category::is_hidden(int64 catID)
@@ -270,7 +270,7 @@ void Model_Category::getCategoryStats(
     , bool WXUNUSED(ignoreFuture) //TODO: deprecated
     , bool group_by_month
     , std::map<int64, double> *budgetAmt
-    , bool fin_months)
+    , [[maybe_unused]] bool fin_months)
 {
     //Initialization
     //Set std::map with zerros
@@ -283,7 +283,7 @@ void Model_Category::getCategoryStats(
     for (int m = 0; m < columns; m++)
     {
         const wxDateTime d = start_date.Add(wxDateSpan::Months(m));
-        monthMap.push_back(std::make_pair(d,m));
+        monthMap.emplace_back(d, m);
     }
     std::reverse(monthMap.begin(), monthMap.end());
 

@@ -70,6 +70,7 @@ Schrempfi
 goe
 STiGMaTa_ch
 Kai Kajus Noack
+Klaus Wich
 
 ### Greek
 Panagiotis Pentzeridis
@@ -111,7 +112,7 @@ Torbjorn Kvande
 ### Polish
 Damian_pl
 Andrzej
-Jerzy Machnicki 
+Jerzy Machnicki
 
 ### Portuguese (Brazilian)
 Jose Carlos
@@ -176,6 +177,7 @@ phira 	 [phira]
 
 ### German
 Renato 	 [Renato]
+Klaus Wich   [KWich]
 
 ### Hungarian
 Toroka 	 [Toroka]
@@ -186,7 +188,7 @@ Maurizio 	 [Mau13]
 ### Polish
 Damian_pl
 
-### Russian 
+### Russian
 Nikolay 	 [Nikolay]
 
 ### Spanish
@@ -211,6 +213,36 @@ Pierre-Alain Mentha
 Francisco Fos Ros
 Adrien Marceau
 Michael Wright
+David Rasley
+Maurizio Ranghino
+Jean-Luc Germain
+Gummarus Van Sand
+Constantin Georgescu
+Bronislav Bagar
+Marita Copeland
+Alexander Habegger
+Antonio Navarro Sánchez
+David Coons
+Waill El-Bahou
+Martin Goike
+Emmanouil Mastropetros
+Reinaldo Tenório
+Markus Egg
+Harold Horton
+Juan de Arriba
+Mario Roberto
+Darrell Hein
+Ruben Delgado Boligan
+Ralf Müller
+Guillaume Crémer
+Kenneth Hughes
+Ronne Haag
+Michael Salter
+Francisco Javier Hidalgo Cantero
+Austin Green
+Vincenzo Apicella
+Martin Speckhardt
+Adam Gallagher
 
 ### 2024
 Renato

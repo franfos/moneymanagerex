@@ -1,7 +1,8 @@
 /*************************************************************************
  Copyright (C) 2006 Madhan Kanagavel
- copyright (C) 2011, 2012 Nikolay & Stefano Giorgio.
+ Copyright (C) 2011, 2012 Nikolay & Stefano Giorgio.
  Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
+ Copyright (C) 2025 Klaus Wich
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -32,9 +33,11 @@
 #include "optionsettingsattachment.h"
 #include "optionsettingsnet.h"
 #include "optionsettingsmisc.h"
+#include "optionsettingstransaction.h"
 
-static const char * const s_pagetitle[] = {
-    wxTRANSLATE("General"), wxTRANSLATE("View"), wxTRANSLATE("Dashboard"), wxTRANSLATE("Attachments"), wxTRANSLATE("Network"), wxTRANSLATE("Other")
+
+static const wxArrayString s_pagetitle = {
+    _n("General"), _n("View"), _n("Dashboard"), _n("Transactions"), _n("Attachments"), _n("Network"), _n("Other")
 };
 
 wxIMPLEMENT_DYNAMIC_CLASS(mmOptionsDialog, wxDialog)
@@ -84,6 +87,7 @@ void mmOptionsDialog::CreateControls()
     images.push_back(mmBitmapBundle(png::GENERAL, iconSize));
     images.push_back(mmBitmapBundle(png::VIEW, iconSize));
     images.push_back(mmBitmapBundle(png::HOME, iconSize));
+    images.push_back(mmBitmapBundle(png::NEW_TRX, iconSize));
     images.push_back(mmBitmapBundle(png::ATTACHMENTS, iconSize));
     images.push_back(mmBitmapBundle(png::NETWORK, iconSize));
     images.push_back(mmBitmapBundle(png::OTHERS, iconSize));
@@ -103,38 +107,37 @@ void mmOptionsDialog::CreateControls()
     /*********************************************************************************************
      General Panel
     **********************************************************************************************/
-    OptionSettingsGeneral* general_panel = new OptionSettingsGeneral(m_listbook, m_app);
-    m_panel_list.push_back(general_panel);
+    m_panel_list.push_back(new OptionSettingsGeneral(m_listbook, m_app));
 
     /*********************************************************************************************
      Views Panel
     **********************************************************************************************/
-    OptionSettingsView* views_panel = new OptionSettingsView(m_listbook);
-    m_panel_list.push_back(views_panel);
+    m_panel_list.push_back(new OptionSettingsView(m_listbook));
 
     /*********************************************************************************************
      Home Panel
     **********************************************************************************************/
-    OptionSettingsHome* home_panel = new OptionSettingsHome(m_listbook);
-    m_panel_list.push_back(home_panel);
+    m_panel_list.push_back(new OptionSettingsHome(m_listbook));
+
+    /*********************************************************************************************
+     Transaction Panel
+    **********************************************************************************************/
+    m_panel_list.push_back(new OptionSettingsTransaction(m_listbook));
 
     /*********************************************************************************************
      Attachments Panel
     **********************************************************************************************/
-    OptionSettingsAttachment* attachment_panel = new OptionSettingsAttachment(m_listbook);
-    m_panel_list.push_back(attachment_panel);
+    m_panel_list.push_back(new OptionSettingsAttachment(m_listbook));
 
     /*********************************************************************************************
     Network Panel
     **********************************************************************************************/
-    OptionSettingsNet* network_panel = new OptionSettingsNet(m_listbook);
-    m_panel_list.push_back(network_panel);
+    m_panel_list.push_back(new OptionSettingsNet(m_listbook));
 
     /*********************************************************************************************
     Others Panel
     **********************************************************************************************/
-    OptionSettingsMisc* others_panel = new OptionSettingsMisc(m_listbook);
-    m_panel_list.push_back(others_panel);
+    m_panel_list.push_back(new OptionSettingsMisc(m_listbook));
 
     /**********************************************************************************************
     Add the panels to the notebook
@@ -157,13 +160,11 @@ void mmOptionsDialog::CreateControls()
     buttonPanel->SetSizer(buttonPanelSizer);
     mainDialogSizer->Add(buttonPanel, wxSizerFlags(g_flagsV).Center());
 
-    wxButton* itemButtonOK = new wxButton(buttonPanel, wxID_OK, _("&OK "));
-    wxButton* itemButtonApply = new wxButton(buttonPanel, wxID_APPLY, _("&Apply "));
-    wxButton* itemButtonCancel = new wxButton(buttonPanel, wxID_CANCEL, wxGetTranslation(g_CancelLabel));
+    wxButton* itemButtonOK = new wxButton(buttonPanel, wxID_OK, _t("&OK "));
     buttonPanelSizer->Add(itemButtonOK, g_flagsH);
-    buttonPanelSizer->Add(itemButtonApply, g_flagsH);
-    buttonPanelSizer->Add(itemButtonCancel, g_flagsH);
     itemButtonOK->SetFocus();
+    buttonPanelSizer->Add(new wxButton(buttonPanel, wxID_APPLY, _t("&Apply ")), g_flagsH);
+    buttonPanelSizer->Add(new wxButton(buttonPanel, wxID_CANCEL, wxGetTranslation(g_CancelLabel)), g_flagsH);
 }
 
 /// Saves the updated System Options to the appropriate databases.
@@ -216,8 +217,8 @@ void mmOptionsDialog::OnApply(wxCommandEvent& /*event*/)
     int selected_page = m_listbook->GetSelection();
     if (m_panel_list[selected_page]->SaveSettings())
     {
-        const wxString& msg = wxString::Format(_("%s page has been saved."), _(s_pagetitle[selected_page]));
-        wxMessageBox(msg, _("Settings"));
+        const wxString& msg = wxString::Format(_t("%s page has been saved."), wxGetTranslation(s_pagetitle[selected_page]));
+        wxMessageBox(msg, _t("Settings"));
     }
 
     Model_Setting::instance().ReleaseSavepoint();

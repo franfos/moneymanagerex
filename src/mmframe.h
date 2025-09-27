@@ -32,6 +32,7 @@ Copyright (C) 2021, 2022, 2024 Mark Whalley (mark@ipx.co.uk)
 #include "constants.h"
 #include "util.h"
 #include "paths.h"
+#include "model/Model_Account.h"
 #include "fusedtransaction.h"
 
 //----------------------------------------------------------------------------
@@ -66,8 +67,8 @@ public:
     void setGotoAccountID(int64 account_id, Fused_Transaction::IdRepeat fused_id = {-1, 0});
     bool financialYearIsDifferent()
     {
-        return (Option::instance().FinancialYearStartDay() != "1" ||
-                Option::instance().FinancialYearStartMonth() != "1");
+        return Option::instance().getFinancialFirstDay() != 1 ||
+            Option::instance().getFinancialFirstMonth() != wxDateTime::Month::Jan;
     }
     /// return the index (mmex::EDocFile) to return the correct file.
     int getHelpFileIndex() const;
@@ -145,7 +146,7 @@ private:
     void InitializeModelTables();
     bool createDataStore(const wxString& fileName, const wxString &passwd, bool openingNew);
     void createMenu();
-    void CreateToolBar();
+    void createToolBar();
     void createReportsPage(mmPrintableBase* rb, bool cleanup);
     void createHelpPage(int index = mmex::HTML_INDEX);
     void refreshPanelData();
@@ -232,7 +233,7 @@ private:
 
     void OnPopupEditFilter(wxCommandEvent& event);
     void OnPopupRenameFilter(wxCommandEvent& event);
-    void OnPopupDeleteFilter(wxCommandEvent& event);   
+    void OnPopupDeleteFilter(wxCommandEvent& event);
 
 private:
     void OnOrgCategories(wxCommandEvent& event);
@@ -252,6 +253,7 @@ private:
     void OnCustomFieldsManager(wxCommandEvent& event);
     void OnGeneralReportManager(wxCommandEvent& event);
     void OnThemeManager(wxCommandEvent& event);
+    void OnDateRangeManager(wxCommandEvent& event);
     void OnColumnOrderManager(wxCommandEvent& event);
     void OnRefreshWebApp(wxCommandEvent&);
     bool OnRefreshWebApp(bool is_silent);
@@ -350,7 +352,7 @@ private:
         MENU_CURRENCY,
         MENU_RATES,
         MENU_LANG,
-        MENU_LANG_MAX = MENU_LANG + wxLANGUAGE_USER_DEFINED,
+        MENU_LANG_MAX = MENU_LANG + static_cast<int>(wxLANGUAGE_USER_DEFINED),
 
         MENU_IMPORT_MMNETCSV,
         MENU_IMPORT_QIF,
@@ -368,6 +370,7 @@ private:
         MENU_TAG_RELOCATION,
         MENU_RELOCATION,
         MENU_THEME_MANAGER,
+        MENU_DATE_RANGE_MANAGER,
         MENU_COLUMN_ORDER,
         MENU_CONVERT_ENC_DB,
         MENU_CHANGE_ENCRYPT_PASSWORD,

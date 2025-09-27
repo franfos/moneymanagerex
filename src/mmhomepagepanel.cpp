@@ -96,6 +96,7 @@ void  mmHomePagePanel::createHtml()
         m_templateText += text.ReadLine() + "\n";
     }
 
+    formatHTML(m_templateText);
     insertDataIntoTemplate();
     fillData();
 }
@@ -129,42 +130,34 @@ void mmHomePagePanel::PrintPage()
 
 void mmHomePagePanel::insertDataIntoTemplate()
 {
-    m_frames["HTMLSCALE"] = wxString::Format("%d", Option::instance().getHtmlFontSize());
+    m_frames["HTMLSCALE"] = wxString::Format("%d", Option::instance().getHtmlScale());
+
+    // Get curreny details to pass to report for Apexcharts
+    int64 baseCurrencyID = Option::instance().getBaseCurrencyID();
+    Model_Currency::Data* baseCurrency = Model_Currency::instance().get(baseCurrencyID);
+
+    // Get locale to pass to reports for Apexcharts
+    wxString locale = Model_Infotable::instance().getString("LOCALE", "en-US"); // Stay blank of not set, currency override handled in Apexcharts call.
+    if (locale == "")
+    {
+        locale = "en-US";
+    }
+    locale.Replace("_", "-");
+    m_frames["LOCALE"] = locale;
 
     double tBalance = 0.0, tReconciled = 0.0;
-    double cardBalance = 0.0, cardReconciled = 0.0;
-    double termBalance = 0.0, termReconciled = 0.0;
-    double cashBalance = 0.0, cashReconciled = 0.0;
-    double loanBalance = 0.0, loanReconciled = 0.0;
-    double shareBalance = 0.0, shareReconciled = 0.0;
-    double assetBalance = 0.0, assetReconciled = 0.0;
-
-    htmlWidgetAccounts account_stats;
-    m_frames["ACCOUNTS_INFO"] = account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_CHECKING);
-    m_frames["CARD_ACCOUNTS_INFO"] = account_stats.displayAccounts(cardBalance, cardReconciled, Model_Account::TYPE_ID_CREDIT_CARD);
-    tBalance += cardBalance;
-    tReconciled += cardReconciled;
 
     // Accounts
-    m_frames["CASH_ACCOUNTS_INFO"] = account_stats.displayAccounts(cashBalance, cashReconciled, Model_Account::TYPE_ID_CASH);
-    tBalance += cashBalance;
-    tReconciled += cashReconciled;
+    htmlWidgetAccounts account_stats;
+    m_frames["ACCOUNTS_INFO"] = account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_CHECKING);
+    m_frames["CARD_ACCOUNTS_INFO"] = account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_CREDIT_CARD);
+    m_frames["CASH_ACCOUNTS_INFO"] = account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_CASH);
+    m_frames["LOAN_ACCOUNTS_INFO"] = account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_LOAN);
+    m_frames["TERM_ACCOUNTS_INFO"] = account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_TERM);
 
-    m_frames["LOAN_ACCOUNTS_INFO"] = account_stats.displayAccounts(loanBalance, loanReconciled, Model_Account::TYPE_ID_LOAN);
-    tBalance += loanBalance;
-    tReconciled += loanReconciled;
+    account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_ASSET);
+    account_stats.displayAccounts(tBalance, tReconciled, Model_Account::TYPE_ID_SHARES);
 
-    m_frames["TERM_ACCOUNTS_INFO"] = account_stats.displayAccounts(termBalance, termReconciled, Model_Account::TYPE_ID_TERM);
-    tBalance += termBalance;
-    tReconciled += termReconciled;
-
-    account_stats.displayAccounts(assetBalance, assetReconciled, Model_Account::TYPE_ID_ASSET);
-    tBalance += assetBalance;
-    tReconciled += assetReconciled;
-
-    account_stats.displayAccounts(shareBalance, shareReconciled, Model_Account::TYPE_ID_SHARES);
-    tBalance += shareBalance;
-    tReconciled += shareReconciled;
 
     //Stocks
     htmlWidgetStocks stocks_widget;
@@ -185,8 +178,14 @@ void mmHomePagePanel::insertDataIntoTemplate()
     m_frames["INCOME_VS_EXPENSES_FORECOLOR"] = mmThemeMetaString(meta::COLOR_REPORT_FORECOLOR);
     m_frames["INCOME_VS_EXPENSES_COLORS"] = wxString::Format("'%s', '%s'", mmThemeMetaString(meta::COLOR_REPORT_CREDIT)
                                                 , mmThemeMetaString(meta::COLOR_REPORT_DEBIT));
+    m_frames["INCOME_VS_EXPENSES_CURR_PFX_SYMBOL"] = baseCurrency ? baseCurrency->PFX_SYMBOL : "$";
+    m_frames["INCOME_VS_EXPENSES_CURR_SFX_SYMBOL"] = baseCurrency ? baseCurrency->SFX_SYMBOL : "";
+    m_frames["INCOME_VS_EXPENSES_CURR_GROUP_SEPARATOR"] = baseCurrency ? baseCurrency->GROUP_SEPARATOR : ",";
+    m_frames["INCOME_VS_EXPENSES_CURR_DECIMAL_POINT"] = baseCurrency ? baseCurrency->DECIMAL_POINT : ".";
+    m_frames["INCOME_VS_EXPENSES_CURR_SCALE"] = baseCurrency ? wxString::Format("%d", static_cast<int>(log10(baseCurrency->SCALE.GetValue()))) : "";
 
-    htmlWidgetBillsAndDeposits bills_and_deposits(_("Upcoming Transactions"));
+
+    htmlWidgetBillsAndDeposits bills_and_deposits(_t("Upcoming Transactions"));
     m_frames["BILLS_AND_DEPOSITS"] = bills_and_deposits.getHTMLText();
 
     htmlWidgetTop7Categories top_trx;
@@ -202,7 +201,7 @@ void mmHomePagePanel::insertDataIntoTemplate()
 
 const wxString mmHomePagePanel::getToggles()
 {
-    const wxString json = Model_Infotable::instance().GetStringInfo("HOME_PAGE_STATUS", "{}");
+    const wxString json = Model_Infotable::instance().getString("HOME_PAGE_STATUS", "{}");
     return json;
 }
 
@@ -234,13 +233,13 @@ void mmHomePagePanel::OnNewWindow(wxWebViewEvent& evt)
     }
     else if (uri.StartsWith("assets:", &sData))
     {
-        m_frame->setNavTreeSection(_("Assets"));
+        m_frame->setNavTreeSection(_t("Assets"));
         wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, MENU_ASSETS);
         m_frame->GetEventHandler()->AddPendingEvent(event);
     }
     else if (uri.StartsWith("billsdeposits:", &sData))
     {
-        m_frame->setNavTreeSection(_("Scheduled Transactions"));
+        m_frame->setNavTreeSection(_t("Scheduled Transactions"));
         wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, MENU_BILLSDEPOSITS);
         m_frame->GetEventHandler()->AddPendingEvent(event);
     }
@@ -249,7 +248,8 @@ void mmHomePagePanel::OnNewWindow(wxWebViewEvent& evt)
         wxLongLong_t id = -1;
         sData.ToLongLong(&id);
         const Model_Account::Data* account = Model_Account::instance().get(id);
-        if (account) {
+        if (account)
+        {
             m_frame->setGotoAccountID(account->id());
             m_frame->setNavTreeAccount(account->ACCOUNTNAME);
             wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, MENU_GOTOACCOUNT);
@@ -261,7 +261,8 @@ void mmHomePagePanel::OnNewWindow(wxWebViewEvent& evt)
         wxLongLong_t id = -1;
         sData.ToLongLong(&id);
         const Model_Account::Data* account = Model_Account::instance().get(id);
-        if (account) {
+        if (account)
+        {
             m_frame->setGotoAccountID(account->id());
             m_frame->setNavTreeAccount(account->ACCOUNTNAME);
             wxCommandEvent event(wxEVT_COMMAND_MENU_SELECTED, MENU_STOCKS);
@@ -275,47 +276,40 @@ void mmHomePagePanel::OnNewWindow(wxWebViewEvent& evt)
 void mmHomePagePanel::OnLinkClicked(wxWebViewEvent& event)
 {
     const wxString& url = wxURI::Unescape(event.GetURL());
+    if (!url.Contains("#"))
+        return;
 
-    if (url.Contains("#"))
-    {
-        wxString name = url.AfterLast('#');
+    wxLogDebug("{{{ mmHomePagePanel::OnLinkClicked()");
+    wxString name = url.AfterLast('#');
+    wxLogDebug("Name = %s", name);
 
-        //Convert the JSON string from database to a json object
-        wxString str = Model_Infotable::instance().GetStringInfo("HOME_PAGE_STATUS", "{}");
+    //Convert the JSON string from database to a json object
+    const wxString key = "HOME_PAGE_STATUS";
+    wxString j_str = Model_Infotable::instance().getString(key, "{}");
+    Document j_doc;
+    if (j_doc.Parse(j_str.c_str()).HasParseError())
+        return;
 
-        wxLogDebug("======= mmHomePagePanel::OnLinkClicked =======");
-        wxLogDebug("Name = %s", name);
+    Document::AllocatorType& json_allocator = j_doc.GetAllocator();
+    wxLogDebug("Old %s:\n%s", key, JSON_PrettyFormated(j_doc));
 
-        Document json_doc;
-        if (json_doc.Parse(str.c_str()).HasParseError())
-            return;
+    const wxString type[] = { "TOP_CATEGORIES", "INVEST", "ACCOUNTS_INFO"
+        ,"CARD_ACCOUNTS_INFO" ,"CASH_ACCOUNTS_INFO", "LOAN_ACCOUNTS_INFO"
+        , "TERM_ACCOUNTS_INFO", "ASSETS", "SHARE_ACCOUNTS_INFO"
+        , "CURRENCY_RATES", "BILLS_AND_DEPOSITS" };
 
-        Document::AllocatorType& json_allocator = json_doc.GetAllocator();
-        wxLogDebug("RapidJson Input\n%s", JSON_PrettyFormated(json_doc));
-
-        const wxString type[] = { "TOP_CATEGORIES", "INVEST", "ACCOUNTS_INFO"
-            ,"CARD_ACCOUNTS_INFO" ,"CASH_ACCOUNTS_INFO", "LOAN_ACCOUNTS_INFO"
-            , "TERM_ACCOUNTS_INFO", "ASSETS", "SHARE_ACCOUNTS_INFO"
-            , "CURRENCY_RATES", "BILLS_AND_DEPOSITS" };
-
-        for (const auto& entry : type)
-        {
-            if (name != entry) continue;
-
-            Value v_type(entry.c_str(), json_allocator);
-            if (json_doc.HasMember(v_type) && json_doc[v_type].IsBool())
-            {
-                json_doc[v_type] = !json_doc[v_type].GetBool();
-            }
-            else
-            {
-                json_doc.AddMember(v_type, true, json_allocator);
-            }
+    for (const auto& entry : type) {
+        if (name != entry) continue;
+        Value v_type(entry.c_str(), json_allocator);
+        if (j_doc.HasMember(v_type) && j_doc[v_type].IsBool()) {
+            j_doc[v_type] = !j_doc[v_type].GetBool();
         }
-
-        wxLogDebug("Saving updated RapidJson\n%s", JSON_PrettyFormated(json_doc));
-        wxLogDebug("======= mmHomePagePanel::OnLinkClicked =======");
-
-        Model_Infotable::instance().Set("HOME_PAGE_STATUS", JSON_PrettyFormated(json_doc));
+        else {
+            j_doc.AddMember(v_type, true, json_allocator);
+        }
     }
+
+    wxLogDebug("New %s:\n%s", key, JSON_PrettyFormated(j_doc));
+    Model_Infotable::instance().setJdoc(key, j_doc);
+    wxLogDebug("}}}");
 }

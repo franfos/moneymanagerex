@@ -88,6 +88,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     budgetyearentrydialog.h
     categdialog.cpp
     categdialog.h
+    choices.cpp
+    choices.h
     constants.cpp
     constants.h
     currencydialog.cpp
@@ -96,6 +98,12 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     customfieldeditdialog.h
     customfieldlistdialog.cpp
     customfieldlistdialog.h
+    daterange2.cpp
+    daterange2.h
+    daterangedialog.cpp
+    daterangedialog.h
+    daterangeeditdialog.cpp
+    daterangeeditdialog.h
     dbcheck.cpp
     dbcheck.h
     dbupgrade.cpp
@@ -147,6 +155,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     mmTextCtrl.cpp
     mmTextCtrl.h
     mmTips.h
+    mmTreeItemData.cpp
+    mmTreeItemData.h
     option.cpp
     option.h
     optiondialog.cpp
@@ -163,6 +173,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     optionsettingsmisc.h
     optionsettingsnet.cpp
     optionsettingsnet.h
+    optionsettingstransaction.cpp
+    optionsettingstransaction.h
     optionsettingsview.cpp
     optionsettingsview.h
     paths.cpp
@@ -170,6 +182,8 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     payeedialog.cpp
     payeedialog.h
     platfdep.h
+    primitive.cpp
+    primitive.h
     recentfiles.cpp
     recentfiles.h
     relocatecategorydialog.cpp
@@ -314,6 +328,7 @@ add_executable(${MMEX_EXE} WIN32 MACOSX_BUNDLE
     model/Model_CustomFieldData.cpp
     model/Model_CustomFieldData.h
     model/Model_CustomField.h
+    model/Model.cpp
     model/Model.h
     model/Model_Infotable.cpp
     model/Model_Infotable.h

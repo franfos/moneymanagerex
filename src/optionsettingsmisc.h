@@ -1,5 +1,6 @@
 /*******************************************************
 Copyright (C) 2014 Stefano Giorgio
+Copyright (C) 2025 Klaus Wich
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -52,19 +53,15 @@ private:
     wxSpinCtrl* m_share_precision = nullptr;
     wxCheckBox* m_refresh_quotes_on_open = nullptr;
     wxChoice* m_asset_compounding = nullptr;
+    wxCheckBox* m_store_account_specific_filter = nullptr;
 
     enum
     {
         ID_DIALOG_OPTIONS_TEXTCTRL_DELIMITER4 = wxID_HIGHEST + 10,
         ID_DIALOG_OPTIONS_CHK_BACKUP,
         ID_DIALOG_OPTIONS_CHK_BACKUP_UPDATE,
+        ID_DIALOG_OPTIONS_CHK_FILTER,
         ID_DIALOG_OPTIONS_TEXTCTRL_STOCKURL,
         ID_DIALOG_OPTIONS_ASSET_COMPOUNDING,
-        ID_DIALOG_OPTIONS_BULK_ENTER,
-        ID_DIALOG_OPTIONS_DEFAULT_TRANSACTION_PAYEE,
-        ID_DIALOG_OPTIONS_DEFAULT_TRANSACTION_CATEGORY_NONTRANSFER,
-        ID_DIALOG_OPTIONS_DEFAULT_TRANSACTION_CATEGORY_TRANSFER,
-        ID_DIALOG_OPTIONS_DEFAULT_TRANSACTION_STATUS,
-        ID_DIALOG_OPTIONS_DEFAULT_TRANSACTION_DATE,
     };
 };

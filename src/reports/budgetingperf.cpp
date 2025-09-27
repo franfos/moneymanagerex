@@ -42,7 +42,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
 
     int startDay;
     wxDate::Month startMonth;
-    if (Option::instance().BudgetFinancialYears())
+    if (Option::instance().getBudgetFinancialYears())
     {
         GetFinancialYearValues(startDay, startMonth);
     } else
@@ -75,12 +75,12 @@ wxString mmReportBudgetingPerformance::getHTMLText()
     yearEnd.Add(wxDateSpan::Year()).Subtract(wxDateSpan::Day());
 
     // Readjust dates by the Budget Offset Option
-    Option::instance().setBudgetDateOffset(yearBegin);
-    Option::instance().setBudgetDateOffset(yearEnd);
+    Option::instance().addBudgetDateOffset(yearBegin);
+    Option::instance().addBudgetDateOffset(yearEnd);
     mmSpecifiedRange date_range(yearBegin, yearEnd);
 
     bool evaluateTransfer = false;
-    if (Option::instance().BudgetIncludeTransfers())
+    if (Option::instance().getBudgetIncludeTransfers())
     {
         evaluateTransfer = true;
     }
@@ -97,7 +97,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
         , Option::instance().getIgnoreFutureTransactions()
         , true
         , (evaluateTransfer ? &budgetAmt : nullptr)
-        , Option::instance().BudgetFinancialYears());
+        , Option::instance().getBudgetFinancialYears());
 
     std::map<int64, std::map<int, double> > budgetStats;
     Model_Budget::instance().getBudgetStats(budgetStats, &date_range, true);
@@ -106,7 +106,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
     std::map<int64, double> actualTotal;
     std::map<int64, double> estimateTotal;
 
-    const wxString& headingStr = wxString::Format(_("Budget Performance for %s"),
+    const wxString& headingStr = wxString::Format(_t("Budget Performance for %s"),
         AdjustYearValues(startDay
             , startMonth, startYear, budget_year)
     );
@@ -128,7 +128,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
             {
                 hb.startTableRow();
                 {
-                    hb.addTableHeaderCell(_("Category"));
+                    hb.addTableHeaderCell(_t("Category"));
                     for (int yidx = 0; yidx < 12; yidx++)
                     {
                         actualTotal[yidx] = 0;
@@ -139,7 +139,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
                             wxDateTime::GetEnglishMonthName(wxDateTime::Month(m)
                                 , wxDateTime::Name_Abbr)), "text-center", 1);
                     }
-                    hb.addTableHeaderCell(_("Total"), "text-center", 2);
+                    hb.addTableHeaderCell(_t("Total"), "text-center", 2);
                 }
                 hb.endTableRow();
                 hb.startTableRow();
@@ -147,10 +147,10 @@ wxString mmReportBudgetingPerformance::getHTMLText()
                     hb.addEmptyTableCell();
                     for (int yidx = 0; yidx < 12; yidx++)
                     {
-                        hb.addTableCell(_("Est.") + "<BR>" + _("Act."), false, false);
+                        hb.addTableCell(_t("Est.") + "<BR>" + _t("Act."), false, false);
                     }
-                    hb.addTableCell(_("Est.") + "<BR>" + _("Act."), false, false);
-                    hb.addTableCell(_("%"), false, false);
+                    hb.addTableCell(_t("Est.") + "<BR>" + _t("Act."), false, false);
+                    hb.addTableCell("%", false, false);
                 }
                 hb.endTableRow();
             }
@@ -161,7 +161,7 @@ wxString mmReportBudgetingPerformance::getHTMLText()
                 std::map<int64, wxString> formattedNames;
                 std::map<int64, std::vector<Model_Category::Data>> categ_children;
 
-                bool budgetDeductMonthly = Option::instance().BudgetDeductMonthly();
+                bool budgetDeductMonthly = Option::instance().getBudgetDeductMonthly();
                 // pull categories from DB and store
                 for (Model_Category::Data category : Model_Category::instance().all(Model_Category::COL_CATEGNAME, false)) {
                     categ_children[category.PARENTID].push_back(category);
@@ -350,9 +350,9 @@ wxString mmReportBudgetingPerformance::getHTMLText()
                     hb.startTotalTableRow();
 
                     hb.addTableCell(wxString::Format("%s<br>%s<br>%s"
-                        ,_("Estimated:")
-                        ,_("Actual:")
-                        ,_("Difference: ")));
+                        ,_t("Estimated:")
+                        ,_t("Actual:")
+                        ,_t("Difference: ")));
 
                     double estimateGrandTotal = 0;
                     double actualGrandTotal = 0;

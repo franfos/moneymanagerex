@@ -35,7 +35,7 @@ class mmAssetDialog : public wxDialog
 public:
     mmAssetDialog(){};
     mmAssetDialog(wxWindow *parent, Model_Asset::Data* asset, const bool trans_data = false);
-    mmAssetDialog(wxWindow *parent, mmGUIFrame* gui_frame, Model_Translink::Data* transfer_entry, Model_Checking::Data* checking_entry);
+    mmAssetDialog(wxWindow *parent, Model_Translink::Data* transfer_entry, Model_Checking::Data* checking_entry);
 
     Model_Asset::Data* m_asset = nullptr;
     void SetTransactionAccountName(const wxString& account_name);
@@ -62,12 +62,12 @@ private:
     void CreateAssetAccount();
     void HideTransactionPanel();
 private:
-    mmGUIFrame* m_gui_frame = nullptr;
     wxChoice*  m_assetType = nullptr;
     wxTextCtrl* m_assetName = nullptr;
     mmDatePickerCtrl* m_dpc = nullptr;
     wxTextCtrl* m_notes = nullptr;
     mmTextCtrl* m_value = nullptr;
+    mmTextCtrl* m_curr_val = nullptr;
     wxChoice* m_valueChange = nullptr;
     wxStaticText* m_compoundingLabel = nullptr;
     wxChoice* m_compoundingChoice = nullptr;
@@ -79,7 +79,7 @@ private:
     UserTransactionPanel* m_transaction_panel = nullptr;
     Model_Translink::Data* m_transfer_entry = nullptr;
     Model_Checking::Data* m_checking_entry = nullptr;
-    wxString m_dialog_heading = _("New Asset");
+    wxString m_dialog_heading = _t("New Asset");
     bool m_hidden_trans_entry = true;
     bool assetRichText = true;
 
@@ -87,6 +87,7 @@ private:
     {
         IDC_COMBO_TYPE = wxID_HIGHEST + 1100,
         IDC_VALUE,
+        IDC_CURR_VAL,
         IDC_COMPOUNDING,
         IDC_RATE,
         IDC_NOTES,

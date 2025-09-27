@@ -52,7 +52,7 @@ wxString Model_Stock::get_stock_name(int64 stock_id)
     if (stock)
         return stock->STOCKNAME;
     else
-        return _("Stock Error");
+        return _t("Stock Error");
 }
 
 /** Return the static instance of Model_Stock table */
@@ -188,7 +188,7 @@ double Model_Stock::getDailyBalanceAt(const Model_Account::Data *account, const 
 
         double numShares = 0.0;
 
-        Model_Translink::Data_Set linkrecords = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, stock.STOCKID);
+        Model_Translink::Data_Set linkrecords = Model_Translink::TranslinkList<Model_Stock>(stock.STOCKID);
         for (const auto& linkrecord : linkrecords)
         {
             Model_Checking::Data* txn = Model_Checking::instance().get(linkrecord.CHECKINGACCOUNTID);
@@ -218,7 +218,7 @@ to base currency.
 double Model_Stock::RealGainLoss(const Data* r, bool to_base_curr)
 {
     Model_Currency::Data* currency = Model_Account::currency(Model_Account::instance().get(r->HELDAT));
-    Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, r->STOCKID);
+    Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList<Model_Stock>(r->STOCKID);
     double real_gain_loss = 0;
     double total_shares = 0;
     double total_initial_value = 0;
@@ -289,13 +289,12 @@ double Model_Stock::UnrealGainLoss(const Data* r, bool to_base_curr)
     {
         Model_Currency::Data* currency = Model_Account::currency(Model_Account::instance().get(r->HELDAT));
         double conv_rate = Model_CurrencyHistory::getDayRate(currency->CURRENCYID);
-        Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, r->STOCKID);
+        Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList<Model_Stock>(r->STOCKID);
         if (!trans_list.empty())
         {
             double total_shares = 0;
             double total_initial_value = 0;
             double avg_share_price = 0;
-            wxString earliest_date = wxDate::Today().FormatISODate();
 
             Model_Checking::Data_Set checking_list;
             for (const auto &trans : trans_list)
@@ -352,4 +351,63 @@ void Model_Stock::UpdateCurrentPrice(const wxString& symbol, const double price)
             Model_Stock::instance().save(stockRecord);
         }
     }
+}
+
+void Model_Stock::UpdatePosition(Model_Stock::Data* stock_entry)
+{
+    Model_Translink::Data_Set trans_list = Model_Translink::TranslinkList<Model_Stock>(stock_entry->STOCKID);
+    double total_shares = 0;
+    double total_initial_value = 0;
+    double total_commission = 0;
+    double avg_share_price = 0;
+    wxString earliest_date = wxDate::Today().FormatISODate();
+    Model_Checking::Data_Set checking_list;
+    for (const auto &trans : trans_list)
+    {
+        Model_Checking::Data* checking_entry = Model_Checking::instance().get(trans.CHECKINGACCOUNTID);
+        if (checking_entry && checking_entry->DELETEDTIME.IsEmpty() && Model_Checking::status_id(checking_entry->STATUS) != Model_Checking::STATUS_ID_VOID)
+            checking_list.push_back(*checking_entry);
+    }
+    std::stable_sort(checking_list.begin(), checking_list.end(), SorterByTRANSDATE());
+    for (const auto &trans : checking_list)
+    {
+        Model_Shareinfo::Data* share_entry = Model_Shareinfo::ShareEntry(trans.TRANSID);
+
+        total_shares += share_entry->SHARENUMBER;
+        if (total_shares < 0)
+            total_shares = 0;
+
+        if (share_entry->SHARENUMBER > 0)
+            total_initial_value += share_entry->SHARENUMBER * share_entry->SHAREPRICE + share_entry->SHARECOMMISSION;
+        else
+            total_initial_value += share_entry->SHARENUMBER * avg_share_price;
+
+        if (total_initial_value < 0)
+            total_initial_value = 0;
+        if (total_shares > 0)
+            avg_share_price = total_initial_value / total_shares;
+
+        total_commission += share_entry->SHARECOMMISSION;
+
+        wxString transdate = trans.TRANSDATE;
+        if (transdate < earliest_date)
+            earliest_date = transdate;
+    }
+
+    // The stock record contains the total of share transactions.
+    if (trans_list.empty())
+    {
+        stock_entry->PURCHASEPRICE = stock_entry->CURRENTPRICE;
+    }
+    else
+    {
+        wxDateTime purchasedate;
+        purchasedate.ParseDateTime(earliest_date) || purchasedate.ParseDate(earliest_date);
+        stock_entry->PURCHASEDATE = purchasedate.FormatISODate();
+        stock_entry->PURCHASEPRICE = avg_share_price;
+        stock_entry->NUMSHARES = total_shares;
+        stock_entry->VALUE = total_initial_value;
+        stock_entry->COMMISSION = total_commission;
+    }
+    Model_Stock::instance().save(stock_entry);
 }

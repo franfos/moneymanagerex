@@ -2,7 +2,8 @@
 Copyright (C) 2006 Madhan Kanagavel
 Copyright (C) 2011, 2012 Stefano Giorgio
 Copyright (C) 2013, 2014 Nikolay Akimov
-Copyright (C) 2021 Mark Whalley (mark@ipx.co.uk)
+Copyright (C) 2021-2025 Mark Whalley (mark@ipx.co.uk)
+Copyright (C) 2025 Klaus Wich
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -49,9 +50,12 @@ public:
         ICON_ASC,
     };
 
-    static wxArrayString FILTER_STR;
-    static const wxString FILTER_STR_ALL;
-    static const wxString FILTER_STR_DIALOG;
+    enum FILTER_ID
+    {
+        FILTER_ID_DATE = 0,     // Not currently used
+        FILTER_ID_DATE_RANGE,
+        FILTER_ID_DATE_PICKER
+    };
 
 public:
     mmCheckingPanel(
@@ -68,80 +72,78 @@ public:
     bool isGroup() const;
     bool isAccount() const;
 
-    void DisplayAccountDetails(int64 account_id = -1);
-        // Refresh account screen with new details
-    void DisplaySplitCategories(Fused_Transaction::IdB fused_id);
-        // Display the split categories for the selected transaction.
-
-    void SetSelectedTransaction(Fused_Transaction::IdRepeat fused_id);
-
-    void RefreshList();
-    void ResetColumnView();
-
+    void loadAccount(int64 account_id = -1);
+    void refreshList();
     wxString BuildPage() const;
+    void resetColumnView();
+    void setSelectedTransaction(Fused_Transaction::IdRepeat fused_id);
+    void displaySplitCategories(Fused_Transaction::IdB fused_id);
+
+    //static support function
+    static wxString getFilterName(FILTER_ID id);
+    static void loadDateRanges(std::vector<DateRange2::Spec>* date_range_ptr, int* range_m, bool isaccount);
+
 
 private:
-    friend class TransactionListCtrl; // needs access to m_core, initdb_, ...
+    friend class TransactionListCtrl;
 
-    enum ID_TRX
+
+    wxDECLARE_EVENT_TABLE();
+    enum
     {
-        ID_TRX_FILTER = wxID_HIGHEST + 50,
-        ID_TRX_SCHEDULED
+        mmID_FILTER = wxID_HIGHEST + 50,
+        mmID_FILTER_DATE_MIN,
+        mmID_FILTER_DATE_MAX = mmID_FILTER_DATE_MIN + 99,
+        mmID_FILTER_ADVANCED,
+        mmID_FILTER_TRANSACTION_DETAIL,
+        mmID_DATE_PICK_LOW,
+        mmID_DATE_PICK_HIGH,
+        mmID_EDIT_DATE_RANGES,
+        mmID_SCHEDULED,
     };
 
-    enum FILTER_ID
-    {
-        FILTER_ID_ALL = 0,
-        FILTER_ID_TODAY,
-        FILTER_ID_CURRENTMONTH,
-        FILTER_ID_LAST30,
-        FILTER_ID_LAST90,
-        FILTER_ID_LASTMONTH,
-        FILTER_ID_LAST3MONTHS,
-        FILTER_ID_LAST12MONTHS,
-        FILTER_ID_CURRENTYEAR,
-        FILTER_ID_CURRENTFINYEAR,
-        FILTER_ID_LASTYEAR,
-        FILTER_ID_LASTFINYEAR,
-        FILTER_ID_STATEMENTDATE,
-        FILTER_ID_DIALOG,
-        FILTER_ID_MAX,
-    };
-
-    static const std::vector<std::pair<FILTER_ID, wxString> > FILTER_CHOICES;
-    static wxArrayString filter_str_all();
-    static void mmPlayTransactionSound();
+    static const std::vector<std::pair<FILTER_ID, wxString> > FILTER_NAME;
+    static const wxString FILTER_NAME_DATE;
 
 private:
+    // set by constructor or loadAccount()
     int64 m_checking_id = -1;
         //  1..   : single account with id m_checking_id
         // -1     : all transactions
         // -2     : deleted transactions
         // -3     : favorite accounts
         // -(4+X) : accounts of type X
-    int m_filter_id;
-    bool m_scheduled_enable;
-    bool m_scheduled_selected;
-    bool m_transFilterActive = false;
-    wxString m_sortSaveTitle;  // Used for saving sort settings
-    wxString m_begin_date;
-    wxString m_end_date;
-    double m_account_flow = 0.0;
-    double m_account_balance = 0.0;
-    double m_account_reconciled = 0.0;
-    bool m_show_reconciled;
-    bool m_show_tips = false;
-    TransactionListCtrl* m_listCtrlAccount = nullptr;
-
     int64 m_account_id = -1;                    // applicable if m_checking_id >= 1
     int m_account_type = -1;                    // applicable if m_checking_id <= -4
     std::set<int64> m_group_ids = {};           // applicable if m_checking_id <= -3
     Model_Account::Data* m_account = nullptr;   // non-null if m_checking_id >= 1
     Model_Currency::Data* m_currency = nullptr; // currency of m_account, or base currency
+    std::vector<DateRange2::Spec> m_date_range_a = {};
+    int m_date_range_m = -1;
 
-    wxDECLARE_EVENT_TABLE();
+    // set by gui
+    FILTER_ID m_filter_id;
+    bool m_filter_advanced;
+    DateRange2 m_current_date_range = DateRange2();
+    bool m_scheduled_enable;
+    bool m_scheduled_selected;
+
+    // calculated by filterList(); applicable if isAccount()
+    double m_flow = 0.0;
+    double m_balance = 0.0;
+    double m_reconciled_balance = 0.0;
+    bool m_show_reconciled;
+
+    // set by showTips()
+    bool m_show_tips = false;
+
+    bool m_use_account_specific_filter;
+
     mmGUIFrame* m_frame = nullptr;
     wxButton* m_bitmapTransFilter = nullptr;
+    wxDatePickerCtrl* fromDateCtrl = nullptr;
+    wxDatePickerCtrl* toDateCtrl = nullptr;
+    wxButton* m_btnTransDetailFilter = nullptr;
     wxButton* m_btnNew = nullptr;
     wxButton* m_btnEdit = nullptr;
     wxButton* m_btnDuplicate = nullptr;
@@ -157,49 +159,60 @@ private:
     wxStaticText* m_header_balance = nullptr;
     wxStaticText* m_info_panel = nullptr;
     wxStaticText* m_info_panel_mini = nullptr;
-    wxSharedPtr<mmFilterTransactionsDialog> m_trans_filter_dlg;
+    wxString m_info_panel_selectedbal;
     wxVector<wxBitmapBundle> m_images;
+    TransactionListCtrl* m_lc = nullptr;
+    wxSharedPtr<mmFilterTransactionsDialog> m_trans_filter_dlg;
+
 
 private:
-    wxString GetPanelTitle() const;
-
-    bool Create(
+    bool create(
         wxWindow* parent,
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,
         long style = wxTAB_TRAVERSAL | wxNO_BORDER,
-        const wxString& name = "mmCheckingPanel" 
+        const wxString& name = "mmCheckingPanel"
     );
-
-    void initFilterChoices();
-    void updateFilterState();
-    void saveFilterChoices();
-    void setAccountSummary();
-    void sortTable();
-    void filterTable();
-    void CreateControls();
-
-    /* updates the checking panel data */
-    void showTips();
-    void showTips(const wxString& tip);
-    void updateScheduledToolTip();
+    void createControls();
+    void updateHeader();
+    void updateFilter(bool firstinit = false);
+    void updateFilterTooltip();
+    void setFilterDate(DateRange2::Spec& spec);
+    void setFilterAdvanced();
+    void loadFilterSettings();
+    void saveFilterSettings();
+    void filterList();
+    void sortList();
     void updateExtraTransactionData(bool single, int repeat_num, bool foreign);
     void enableButtons(bool edit, bool dup, bool del, bool enter, bool skip, bool attach);
+    void showTips();
+    void showTips(const wxString& tip);
+    void updateScheduledEnable();
+    void updateScheduledToolTip();
+    void datePickProceed();
 
-    void OnNewTransaction(wxCommandEvent& event);
-    void OnEditTransaction(wxCommandEvent& event);
-    void OnDuplicateTransaction(wxCommandEvent& event);
-    void OnRestoreTransaction(wxCommandEvent& event);
-    void OnDeleteTransaction(wxCommandEvent& event);
-    void OnEnterScheduled(wxCommandEvent& event);
-    void OnSkipScheduled(wxCommandEvent& event);
-    void OnOpenAttachment(wxCommandEvent& event);
-    void OnMoveTransaction(wxCommandEvent& event);
-    void OnMouseLeftDown(wxCommandEvent& event);
-    void OnButtonRightDown(wxMouseEvent& event);
-    void OnViewPopupSelected(wxCommandEvent& event);
-    void OnScheduled(wxCommandEvent& event);
-    void OnSearchTxtEntered(wxCommandEvent& event);
+    void onFilterPopup(wxCommandEvent& event);
+    void onFilterDate(wxCommandEvent& event);
+    void onDatePickLow(wxDateEvent& event);
+    void onDatePickHigh(wxDateEvent& event);
+    void onFilterAdvanced(wxCommandEvent& event);
+    void onEditDateRanges(wxCommandEvent& event);
+    void onScheduled(wxCommandEvent& event);
+    void onNewTransaction(wxCommandEvent& event);
+    void onEditTransaction(wxCommandEvent& event);
+    void onDeleteTransaction(wxCommandEvent& event);
+    void onRestoreTransaction(wxCommandEvent& event);
+    void onDuplicateTransaction(wxCommandEvent& event);
+    void onMoveTransaction(wxCommandEvent& event);
+    void onEnterScheduled(wxCommandEvent& event);
+    void onSkipScheduled(wxCommandEvent& event);
+    void onOpenAttachment(wxCommandEvent& event);
+    void onSearchTxtEntered(wxCommandEvent& event);
+    void onButtonRightDown(wxMouseEvent& event);
+    void onInfoPanelClick(wxMouseEvent& event, wxStaticText* infoPanel);
+
+    wxString getPanelTitle() const;
+    static void mmPlayTransactionSound();
 };
 
 inline bool mmCheckingPanel::isAllTrans() const { return m_checking_id == -1; }

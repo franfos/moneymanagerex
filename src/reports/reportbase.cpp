@@ -2,6 +2,7 @@
  Copyright (C) 2013 James Higley
  Copyright (C) 2020 Nikolay Akimov
  Copyright (C) 2022 Mark Whalley (mark@ipx.co.uk)
+ Copyright (C) 2025 Klaus Wich
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -27,7 +28,7 @@
 #include "util.h"
 
 mmPrintableBase::mmPrintableBase(const wxString& title)
-    : m_title(title)    
+    : m_title(title)
 {
 }
 
@@ -124,7 +125,7 @@ void mmPrintableBase::setReportSettings()
         {
             const wxString& rj_key = wxString::Format("REPORT_%d", ID);
             const wxString& rj_value = wxString::FromUTF8(json_buffer.GetString());
-            Model_Infotable::instance().Set(rj_key, rj_value);
+            Model_Infotable::instance().setString(rj_key, rj_value);
             m_settings = rj_value;
         }
     }
@@ -153,9 +154,9 @@ void mmPrintableBase::restoreReportSettings()
     int selection = 0;
     if (j_doc.HasMember("ACCOUNTSELECTION") && j_doc["ACCOUNTSELECTION"].IsInt()) {
         selection = j_doc["ACCOUNTSELECTION"].GetInt();
-        if (selection > (Model_Account::TYPE_STR.Count() + 2)) selection = 0;
+        if (selection > (Model_Account::TYPE_ID_size + 2)) selection = 0;
     }
-    if (selection > (Model_Account::TYPE_STR.Count() + 2))
+    if (selection > (Model_Account::TYPE_ID_size + 2))
         selection = 0;
 
     accountArray_ = selectedAccountArray_ = nullptr;
@@ -171,14 +172,14 @@ void mmPrintableBase::restoreReportSettings()
         }
         accountArray_ = selectedAccountArray_ = accountSelections;
     } else if (selection > 1)
-        setAccounts(selection, Model_Account::TYPE_STR[selection - 2]);
+        setAccounts(selection, Model_Account::type_name(selection - 2));
 
     m_account_selection = selection;
 }
 
 void mmPrintableBase::date_range(const mmDateRange* date_range, int selection)
-{ 
-    this->m_date_range = date_range; 
+{
+    this->m_date_range = date_range;
     this->m_date_selection = selection;
 }
 
@@ -193,13 +194,13 @@ const wxString mmPrintableBase::getAccountNames() const
     }
     else
     {
-        accountsMsg << _("All Accounts");
+        accountsMsg << _t("All Accounts");
     }
 
     if (accountsMsg.empty()) {
-        accountsMsg = _("None");
+        accountsMsg = _t("None");
     }
-    accountsMsg.Prepend(_("Accounts: "));
+    accountsMsg.Prepend(_t("Accounts: "));
     return accountsMsg;
 }
 
@@ -217,17 +218,16 @@ void mmPrintableBase::setAccounts(int selection, const wxString& name)
         case 1: // Select Accounts
         {
             wxArrayString accounts;
-            auto a = Model_Account::instance().find(
-                Model_Account::ACCOUNTTYPE(Model_Account::TYPE_STR_INVESTMENT, NOT_EQUAL));
+            auto a = Model_Account::instance().all();
             std::stable_sort(a.begin(), a.end(), SorterByACCOUNTNAME());
             for (const auto& item : a) {
-                if (m_only_active && item.STATUS != Model_Account::STATUS_STR_OPEN)
+                if (m_only_active && item.STATUS != Model_Account::STATUS_NAME_OPEN)
                     continue;
                 accounts.Add(item.ACCOUNTNAME);
             }
 
             auto parent = wxWindow::FindWindowById(mmID_REPORTS);
-            mmMultiChoiceDialog mcd(parent ? parent : 0, _("Choose Accounts"), wxGetTranslation(m_title), accounts);
+            mmMultiChoiceDialog mcd(parent ? parent : 0, _t("Choose Accounts"), wxGetTranslation(m_title), accounts);
 
             if (selectedAccountArray_ && !selectedAccountArray_->IsEmpty())
             {
@@ -283,6 +283,9 @@ mmGeneralReport::mmGeneralReport(const Model_Report::Data* report)
 : mmPrintableBase(report->REPORTNAME)
 , m_report(report)
 {
+    if (m_id == -1) {
+        m_id = report->REPORTID.ToLong(); // Store reportid if no id is provided
+    }
 }
 
 wxString mmGeneralReport::getHTMLText()
@@ -325,7 +328,7 @@ wxString mmGeneralReport::getHTMLText()
 
     return out;
 }
- 
+
 int mmGeneralReport::report_parameters()
 {
     int params = 0;
@@ -359,4 +362,3 @@ void mm_html_template::load_context()
     const Model_Currency::Data* currency = Model_Currency::GetBaseCurrency();
     if (currency) currency->to_template(*this);
 }
-

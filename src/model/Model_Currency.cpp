@@ -33,15 +33,13 @@ constexpr auto LIMIT = 1e-10;
 static wxString s_locale;
 static wxString s_use_locale;
 
-const std::vector<std::pair<Model_Currency::TYPE_ID, wxString> > Model_Currency::TYPE_CHOICES =
-{
-    { Model_Currency::TYPE_ID_FIAT,   wxString(wxTRANSLATE("Fiat")) },
-    { Model_Currency::TYPE_ID_CRYPTO, wxString(wxTRANSLATE("Crypto")) }
-};
+ChoicesName Model_Currency::TYPE_CHOICES = ChoicesName({
+    { TYPE_ID_FIAT,   _n("Fiat") },
+    { TYPE_ID_CRYPTO, _n("Crypto") }
+});
 
-wxArrayString Model_Currency::TYPE_STR = type_str_all();
-const wxString Model_Currency::TYPE_STR_FIAT   = TYPE_STR[TYPE_ID_FIAT];
-const wxString Model_Currency::TYPE_STR_CRYPTO = TYPE_STR[TYPE_ID_CRYPTO];
+const wxString Model_Currency::TYPE_NAME_FIAT   = type_name(TYPE_ID_FIAT);
+const wxString Model_Currency::TYPE_NAME_CRYPTO = type_name(TYPE_ID_CRYPTO);
 
 Model_Currency::Model_Currency()
     : Model<DB_Table_CURRENCYFORMATS_V1>()
@@ -74,35 +72,9 @@ Model_Currency& Model_Currency::instance()
     return Singleton<Model_Currency>::instance();
 }
 
-wxArrayString Model_Currency::type_str_all()
-{
-    wxArrayString types;
-    int i = 0;
-    for (const auto& item : TYPE_CHOICES)
-    {
-        wxASSERT_MSG(item.first == i++, "Wrong order in Model_Currency::TYPE_CHOICES");
-        types.Add(item.second);
-    }
-    return types;
-}
-
-Model_Currency::TYPE_ID Model_Currency::type_id(const Data* r)
-{
-    for (const auto &entry : TYPE_CHOICES)
-    {
-        if (r->CURRENCY_TYPE.CmpNoCase(entry.second) == 0) return entry.first;
-    }
-    return TYPE_ID_FIAT;
-}
-
-Model_Currency::TYPE_ID Model_Currency::type_id(const Data& r)
-{
-    return type_id(&r);
-}
-
 DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE Model_Currency::CURRENCY_TYPE(TYPE_ID currencytype, OP op)
 {
-    return DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE(Model_Currency::TYPE_STR[currencytype], op);
+    return DB_Table_CURRENCYFORMATS_V1::CURRENCY_TYPE(Model_Currency::type_name(currencytype), op);
 }
 
 const wxArrayString Model_Currency::all_currency_names()
@@ -239,7 +211,7 @@ const wxString Model_Currency::toString(double value, const Data* currency, int 
     static wxString d; //default Locale Support Y/N
 
     if (s_locale.empty()) {
-        s_locale = Model_Infotable::instance().GetStringInfo("LOCALE", " ");
+        s_locale = Model_Infotable::instance().getString("LOCALE", " ");
         if (s_locale.empty()) {
             s_locale = " ";
         }
@@ -349,7 +321,7 @@ const wxString Model_Currency::fromString2CLocale(const wxString &s, const Data*
     wxRegEx pattern(R"([^0-9.,+-/*()])");
     pattern.ReplaceAll(&str, wxEmptyString);
 
-    auto locale = Model_Infotable::instance().GetStringInfo("LOCALE", "");
+    auto locale = Model_Infotable::instance().getString("LOCALE", "");
 
     if (locale.empty())
     {

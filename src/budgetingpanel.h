@@ -26,20 +26,35 @@
 class wxListCtrl;
 class wxListEvent;
 class mmBudgetingPanel;
-class mmGUIFrame;
 
 /* Custom ListCtrl class that implements virtual LC style */
 class budgetingListCtrl : public mmListCtrl
 {
     DECLARE_NO_COPY_CLASS(budgetingListCtrl)
-        wxDECLARE_EVENT_TABLE();
+    wxDECLARE_EVENT_TABLE();
+
+public:
+    enum LIST_ID
+    {
+        LIST_ID_ICON = 0,
+        LIST_ID_CATEGORY,
+        LIST_ID_FREQUENCY,
+        LIST_ID_AMOUNT,
+        LIST_ID_ESTIMATED,
+        LIST_ID_ACTUAL,
+        LIST_ID_NOTES,
+        LIST_ID_size, // number of columns
+    };
+
+private:
+    static const std::vector<ListColumnInfo> LIST_INFO;
 
 public:
     budgetingListCtrl(mmBudgetingPanel* cp, wxWindow *parent, const wxWindowID id);
 
 public:
     /* required overrides for virtual style list control */
-    virtual wxString OnGetItemText(long item, long column) const;
+    virtual wxString OnGetItemText(long item, long col_nr) const;
     virtual wxListItemAttr *OnGetItemAttr(long item) const;
     virtual int OnGetItemImage(long item) const;
 
@@ -58,7 +73,7 @@ class mmBudgetingPanel : public mmPanelBase
 
 public:
     mmBudgetingPanel(int64 budgetYearID
-        , wxWindow *parent, mmGUIFrame *frame
+        , wxWindow *parent
         , wxWindowID winid = wxID_ANY
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
@@ -68,10 +83,9 @@ public:
 
     /* updates the checking panel data */
     void initVirtualListControl();
-    int col_max() { return COL_MAX; }
 
     /* Getter for Virtual List Control */
-    wxString getItem(long item, long column);
+    wxString getItem(long item, int col_id);
 
     void DisplayBudgetingDetails(int64 budgetYearID);
     int64 GetBudgetYearID()
@@ -91,7 +105,7 @@ public:
 
     void RefreshList();
 
-    wxString BuildPage() const { return listCtrlBudget_->BuildPage(GetPanelTitle()); }
+    wxString BuildPage() const { return m_lc->BuildPage(GetPanelTitle()); }
 
 private:
     enum EIcons
@@ -101,7 +115,6 @@ private:
         ICON_FOLLOWUP
     };
 
-    mmGUIFrame* m_frame = nullptr;
     std::vector<std::pair<int64, int64> > budget_;
     std::map<int64, std::pair<int, bool > > displayDetails_; //map categid to level of the category, whether category is visible, and whether any subtree is visible 
     std::map<int64, std::pair<double, double> > budgetTotals_;
@@ -110,7 +123,7 @@ private:
     std::map<int64, wxString> budgetNotes_;
     std::map<int64, std::map<int,double> > categoryStats_;
     bool monthlyBudget_;
-    wxSharedPtr<budgetingListCtrl> listCtrlBudget_;
+    wxSharedPtr<budgetingListCtrl> m_lc;
     wxString currentView_;
     int64 budgetYearID_;
     wxString m_monthName;
@@ -131,7 +144,7 @@ private:
         , const wxString& name = "mmBudgetingPanel");
 
     void CreateControls();
-    void sortTable();
+    void sortList();
     bool DisplayEntryAllowed(int64 categoryID, int64 subcategoryID);
     void UpdateBudgetHeading();
     double getEstimate(int64 category) const;
@@ -140,17 +153,5 @@ private:
     /* Event handlers for Buttons */
     void OnViewPopupSelected(wxCommandEvent& event);
     void OnMouseLeftDown(wxCommandEvent& event);
-
-    enum EColumn
-    {
-        COL_ICON = 0,
-        COL_CATEGORY,
-        COL_FREQUENCY,
-        COL_AMOUNT,
-        COL_ESTIMATED,
-        COL_ACTUAL,
-        COL_NOTES,
-        COL_MAX, // number of columns
-    };
 };
 

@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
+ *          AUTO GENERATED at 2025-05-08 09:16:56.228434.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -233,14 +233,14 @@ struct DB_Table_REPORT_V1 : public DB_Table
             REPORTID = id;
         }
 
-        bool operator < (const Data& r) const
+        auto operator < (const Data& other) const
         {
-            return this->id() < r.id();
+            return this->id() < other.id();
         }
-        
-        bool operator < (const Data* r) const
+
+        auto operator < (const Data* other) const
         {
-            return this->id() < r->id();
+            return this->id() < other->id();
         }
 
         bool equals(const Data* r) const
@@ -402,7 +402,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
         }
 
         /** Save the record instance in memory to the database. */
-        bool save(wxSQLite3Database* db)
+        bool save(wxSQLite3Database* db, bool force_insert = false)
         {
             if (db && db->IsReadOnly()) return false;
             if (!table_ || !db) 
@@ -411,7 +411,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
                 return false;
             }
 
-            return table_->save(this, db);
+            return table_->save(this, db, force_insert);
         }
 
         /** Remove the record instance from memory and the database. */
@@ -469,10 +469,10 @@ struct DB_Table_REPORT_V1 : public DB_Table
     * Either create a new record or update the existing record.
     * Remove old record from the memory table (cache)
     */
-    bool save(Self::Data* entity, wxSQLite3Database* db)
+    bool save(Self::Data* entity, wxSQLite3Database* db, bool force_insert = false)
     {
         wxString sql = wxEmptyString;
-        if (entity->id() <= 0) //  new & insert
+        if (entity->id() <= 0 || force_insert) //  new & insert
         {
             sql = "INSERT INTO REPORT_V1(REPORTNAME, GROUPNAME, ACTIVE, SQLCONTENT, LUACONTENT, TEMPLATECONTENT, DESCRIPTION, REPORTID) VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
         }
@@ -574,9 +574,8 @@ struct DB_Table_REPORT_V1 : public DB_Table
     template<typename... Args>
     Self::Data* get_one(const Args& ... args)
     {
-        for (Index_By_Id::iterator it = index_by_id_.begin(); it != index_by_id_.end(); ++ it)
+        for (auto& [_, item] : index_by_id_)
         {
-            Self::Data* item = it->second;
             if (item->id() > 0 && match(item, args...)) 
             {
                 ++ hit_;
@@ -601,8 +600,7 @@ struct DB_Table_REPORT_V1 : public DB_Table
             return nullptr;
         }
 
-        Index_By_Id::iterator it = index_by_id_.find(id);
-        if (it != index_by_id_.end())
+        if (auto it = index_by_id_.find(id); it != index_by_id_.end())
         {
             ++ hit_;
             return it->second;

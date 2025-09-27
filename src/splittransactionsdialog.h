@@ -69,8 +69,6 @@ public:
     mmSplitTransactionDialog(wxWindow* parent
         , std::vector<Split>& split
         , int64 accountID
-        , int transType
-        , double totalAmount = 0.0
         , bool is_view_only = false
         );
     std::vector<Split> mmGetResult() const;
@@ -79,7 +77,7 @@ private:
     bool Create(
         wxWindow* parent
         , wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Split Transaction")
+        , const wxString& caption = _t("Split Transaction")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxRESIZE_BORDER | wxSYSTEM_MENU | wxCLOSE_BOX
@@ -95,6 +93,7 @@ private:
 
     void OnOk(wxCommandEvent& event);
     void OnAddRow(wxCommandEvent& event);
+    void OnNewTagCreated(wxListEvent& event);
     void OnRemoveRow(wxCommandEvent&);
     void OnOtherButton(wxCommandEvent& event);
     void OnTextEntered(wxCommandEvent& event);
@@ -112,8 +111,6 @@ private:
 
     std::vector<SplitWidget> m_splits_widgets;
     std::vector<Split> m_orig_splits, m_splits;
-    double totalAmount_ =0.0;
-    int transType_ = 0;
     int row_num_ = 0;
     Model_Currency::Data* m_currency = nullptr;
     bool is_view_only_;

@@ -376,14 +376,14 @@ struct DB_Table_%s : public DB_Table
             %s = id;
         }
 
-        bool operator < (const Data& r) const
+        auto operator < (const Data& other) const
         {
-            return this->id() < r.id();
+            return this->id() < other.id();
         }
-        
-        bool operator < (const Data* r) const
+
+        auto operator < (const Data* other) const
         {
-            return this->id() < r->id();
+            return this->id() < other->id();
         }
 ''' % (self._primay_key, self._primay_key)
 
@@ -535,7 +535,7 @@ struct DB_Table_%s : public DB_Table
         s += '''
 
         /** Save the record instance in memory to the database. */
-        bool save(wxSQLite3Database* db)
+        bool save(wxSQLite3Database* db, bool force_insert = false)
         {
             if (db && db->IsReadOnly()) return false;
             if (!table_ || !db) 
@@ -544,7 +544,7 @@ struct DB_Table_%s : public DB_Table
                 return false;
             }
 
-            return table_->save(this, db);
+            return table_->save(this, db, force_insert);
         }
 
         /** Remove the record instance from memory and the database. */
@@ -610,10 +610,10 @@ struct DB_Table_%s : public DB_Table
     * Either create a new record or update the existing record.
     * Remove old record from the memory table (cache)
     */
-    bool save(Self::Data* entity, wxSQLite3Database* db)
+    bool save(Self::Data* entity, wxSQLite3Database* db, bool force_insert = false)
     {
         wxString sql = wxEmptyString;
-        if (entity->id() <= 0) //  new & insert
+        if (entity->id() <= 0 || force_insert) //  new & insert
         {
             sql = "INSERT INTO %s(%s, %s) VALUES(%s)";
         }''' % (self._table, ', '.join([field['name']\
@@ -724,9 +724,8 @@ struct DB_Table_%s : public DB_Table
     template<typename... Args>
     Self::Data* get_one(const Args& ... args)
     {
-        for (Index_By_Id::iterator it = index_by_id_.begin(); it != index_by_id_.end(); ++ it)
+        for (auto& [_, item] : index_by_id_)
         {
-            Self::Data* item = it->second;
             if (item->id() > 0 && match(item, args...)) 
             {
                 ++ hit_;
@@ -753,8 +752,7 @@ struct DB_Table_%s : public DB_Table
             return nullptr;
         }
 
-        Index_By_Id::iterator it = index_by_id_.find(id);
-        if (it != index_by_id_.end())
+        if (auto it = index_by_id_.find(id); it != index_by_id_.end())
         {
             ++ hit_;
             return it->second;
@@ -898,6 +896,8 @@ struct DB_Column
     {}
 };
 
+static int64 ticks_last_ = 0;
+    
 struct DB_Table
 {
     DB_Table(): hit_(0), miss_(0), skip_(0) {};
@@ -918,10 +918,14 @@ struct DB_Table
         db->ExecuteUpdate("DROP TABLE IF EXISTS " + this->name());
     }
 
-    static wxLongLong newId()
+    static int64 newId()
     {
-        // Get the current time in milliseconds as wxLongLong
-        wxLongLong ticks = wxDateTime::UNow().GetValue();
+        // Get the current time in milliseconds as wxLongLong/int64
+        int64 ticks = wxDateTime::UNow().GetValue();
+        // Ensure uniqueness from last generated value
+        if (ticks <= ticks_last_)
+            ticks = ticks_last_ + 1;
+        ticks_last_ = ticks;
         // Generate a random 3-digit number (0 to 999)
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -1017,10 +1021,7 @@ bool match(const DATA* data, const Arg1& arg1)
 template<class DATA, typename Arg1, typename... Args>
 bool match(const DATA* data, const Arg1& arg1, const Args&... args)
 {
-    if (data->match(arg1)) 
-        return match(data, args...);
-    else
-        return false; // Short-circuit evaluation
+    return (data->match(arg1) && ... && data->match(args));
 }
 '''
     for field in sorted(fields):

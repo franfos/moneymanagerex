@@ -27,8 +27,38 @@ class wxButton;
 /* Custom ListCtrl class that implements virtual LC style */
 class mmAssetsListCtrl: public mmListCtrl
 {
+public:
+    enum LIST_ID
+    {
+        LIST_ID_ICON = 0,
+        LIST_ID_ID,
+        LIST_ID_NAME,
+        LIST_ID_DATE,
+        LIST_ID_TYPE,
+        LIST_ID_VALUE_INITIAL,
+        LIST_ID_VALUE_CURRENT,
+        LIST_ID_NOTES,
+        LIST_ID_size, // number of columns
+    };
+
+private:
     DECLARE_NO_COPY_CLASS(mmAssetsListCtrl)
     wxDECLARE_EVENT_TABLE();
+    enum {
+        MENU_TREEPOPUP_NEW = wxID_HIGHEST + 1200,
+        MENU_TREEPOPUP_ADDTRANS,
+        MENU_TREEPOPUP_VIEWTRANS,
+        MENU_TREEPOPUP_GOTOACCOUNT,
+        MENU_TREEPOPUP_EDIT,
+        MENU_TREEPOPUP_DELETE,
+        MENU_ON_DUPLICATE_TRANSACTION,
+        MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS,
+    };
+
+private:
+    static const std::vector<ListColumnInfo> LIST_INFO;
+    mmAssetsPanel* m_panel = nullptr;
+    long m_selected_row = -1;
 
 public:
     mmAssetsListCtrl(mmAssetsPanel* cp, wxWindow *parent, wxWindowID winid = wxID_ANY);
@@ -46,14 +76,13 @@ public:
     void doRefreshItems(int64 trx_id = -1);
 
 protected:
-    virtual void OnColClick(wxListEvent& event);
+    virtual int getSortIcon(bool asc) const override;
+    virtual void OnColClick(wxListEvent& event) override;
 
 private:
-    mmAssetsPanel* m_panel = nullptr;
-
     /* required overrides for virtual style list control */
-    virtual wxString OnGetItemText(long item, long column) const;
-    virtual int OnGetItemImage(long item) const;
+    virtual wxString OnGetItemText(long item, long col_nr) const override;
+    virtual int OnGetItemImage(long item) const override;
 
     void OnMouseRightClick(wxMouseEvent& event);
     void OnListLeftClick(wxMouseEvent& event);
@@ -62,17 +91,6 @@ private:
     void OnListItemSelected(wxListEvent& event);
     void OnEndLabelEdit(wxListEvent& event);
     bool EditAsset(Model_Asset::Data* pEntry);
-
-    enum {
-        MENU_TREEPOPUP_NEW = wxID_HIGHEST + 1200,
-        MENU_TREEPOPUP_ADDTRANS,
-        MENU_TREEPOPUP_VIEWTRANS,
-        MENU_TREEPOPUP_GOTOACCOUNT,
-        MENU_TREEPOPUP_EDIT,
-        MENU_TREEPOPUP_DELETE,
-        MENU_ON_DUPLICATE_TRANSACTION,
-        MENU_TREEPOPUP_ORGANIZE_ATTACHMENTS,
-    };
 };
 
 class mmAssetsPanel : public mmPanelBase
@@ -93,35 +111,25 @@ public:
         ICON_DOWNARROW
     };
 
-    enum EColumn
-    {
-        COL_ICON = 0,
-        COL_ID,
-        COL_NAME,
-        COL_DATE,
-        COL_TYPE,
-        COL_VALUE_INITIAL,
-        COL_VALUE_CURRENT,
-        COL_NOTES,
-        COL_MAX, // number of columns
-    };
-
     mmAssetsPanel(mmGUIFrame* frame, wxWindow *parent, wxWindowID winid, const wxString& name="mmAssetsPanel");
     mmGUIFrame* m_frame = nullptr;
 
     void updateExtraAssetData(int selIndex);
-    int initVirtualListControl(int64 trx_id = -1, int col = 0, bool asc = true);
-    wxString getItem(long item, long column);
+    int initVirtualListControl(int64 trx_id = -1);
+    wxString getItem(long item, int col_id);
 
     Model_Asset::Data_Set m_assets;
     Model_Asset::TYPE_ID m_filter_type;
-    int col_max() { return COL_MAX; }
-    int col_sort() { return COL_DATE; }
 
-    wxString BuildPage() const { return m_listCtrlAssets->BuildPage(_("Assets")); }
+    wxString BuildPage() const { return m_lc->BuildPage(_t("Assets")); }
 
     void AddAssetTrans(const int selected_index);
     void ViewAssetTrans(const int selected_index);
+    wxListCtrl* InitAssetTxnListCtrl(wxWindow* parent);
+    void LoadAssetTransactions(wxListCtrl* listCtrl, int64 assetId);
+    void FillAssetListRow(wxListCtrl* listCtrl, long index, const Model_Checking::Data& txn);
+    void BindAssetListEvents(wxListCtrl* listCtrl);
+    void CopySelectedRowsToClipboard(wxListCtrl* listCtrl);
     void GotoAssetAccount(const int selected_index);
     void RefreshList();
 
@@ -129,7 +137,7 @@ private:
     void enableEditDeleteButtons(bool enable);
     void OnSearchTxtEntered(wxCommandEvent& event);
     
-    mmAssetsListCtrl* m_listCtrlAssets = nullptr;
+    mmAssetsListCtrl* m_lc = nullptr;
     wxButton* m_bitmapTransFilter = nullptr;
     wxStaticText* header_text_ = nullptr;
 
@@ -151,7 +159,7 @@ private:
     void OnViewAssetTrans(wxCommandEvent& event);
 
     void OnViewPopupSelected(wxCommandEvent& event);
-    void sortTable();
+    void sortList();
     void SetAccountParameters(const Model_Account::Data* account);
 
 private:
@@ -162,4 +170,4 @@ private:
     };
 };
 
-inline void mmAssetsPanel::RefreshList(){ m_listCtrlAssets->doRefreshItems(); }
+inline void mmAssetsPanel::RefreshList(){ m_lc->doRefreshItems(); }

@@ -2,6 +2,7 @@
 Copyright (C) 2014 Nikolay Akimov
 Copyright (C) 2014 Gabriele-V
 Copyright (C) 2022 Mark Whalley (mark@ipx.co.uk)
+Copyright (C) 2025 Klaus Wich
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -46,8 +47,8 @@ public:
     mmCalculatorPopup(wxWindow* parent, mmTextCtrl* target = nullptr);
     virtual ~mmCalculatorPopup();
 
-    void SetValue(wxString& value); 
-    void SetFocus();
+    void SetValue(wxString& value);
+    void SetFocus() override;
     void SetTarget(mmTextCtrl* target);
 
     virtual void Popup(wxWindow* focus = NULL) override
@@ -138,7 +139,7 @@ public:
     int64 mmGetId() const;
     const wxString mmGetPattern() const;
     bool mmIsValid() const;
-    void mmDoReInitialize(); 
+    void mmDoReInitialize();
 protected:
     void OnTextUpdated(wxCommandEvent& event);
     void OnSetFocus(wxFocusEvent& event);
@@ -256,9 +257,11 @@ public:
     ~mmDatePickerCtrl();
     void SetValue(const wxDateTime &dt);    // Override
     bool Enable(bool state=true);           // Override
+    bool Show(bool state=true);             // Override
     wxBoxSizer* mmGetLayout(bool showTimeCtrl = true);
     wxBoxSizer* mmGetLayoutWithTime();
     wxDateTime GetValue();
+    bool isItMyDateControl(wxObject* obj);
 
 private:
     wxStaticText* getTextWeek();
@@ -406,7 +409,7 @@ protected:
         {
             dismissedByButton_ = true;
         }
-        else 
+        else
             dismissedByButton_ = false;
 #endif
     }
@@ -424,7 +427,7 @@ public:
         const wxSize& size = wxDefaultSize, long style = 0
     );
     bool IsValid();
-    bool Validate(const wxString& tagText = wxEmptyString);
+    bool ValidateTagText(const wxString& tagText = wxEmptyString);
     const wxArrayInt64 GetTagIDs() const;
     const wxArrayString GetTagStrings();
     void Reinitialize();
@@ -466,7 +469,7 @@ private:
     wxColour bgColorDisabled_ = wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE);
 };
 
-inline bool mmTagTextCtrl::IsValid() { return Validate(); }
+inline bool mmTagTextCtrl::IsValid() { return ValidateTagText(); }
 inline const wxArrayString mmTagTextCtrl::GetTagStrings() { return parseTags(textCtrl_->GetText()); }
 inline void mmTagTextCtrl::Reinitialize() { init(); }
 inline void mmTagTextCtrl::SetText(const wxString& text) { textCtrl_->SetText(text); }

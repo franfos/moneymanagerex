@@ -1,6 +1,7 @@
 /*******************************************************
  Copyright (C) 2013,2014 Guan Lisheng (guanlisheng@gmail.com)
  Copyright (C) 2016 Stefano Giorgio
+ Copyright (C) 2025 Klaus Wich
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -52,13 +53,13 @@ Model_Translink& Model_Translink::instance()
 
 Model_Translink::CHECKING_TYPE Model_Translink::type_checking(const int64 tt)
 {
-    if (tt == AS_TRANSFER)
+    if (tt == AS_INCOME_EXPENSE || tt == -1)
     {
-        return AS_TRANSFER;
+        return AS_INCOME_EXPENSE;
     }
     else
     {
-        return AS_INCOME_EXPENSE;
+        return AS_TRANSFER;
     }
 }
 
@@ -67,7 +68,7 @@ Model_Translink::Data* Model_Translink::SetAssetTranslink(const int64 asset_id
     , const CHECKING_TYPE checking_type)
 {
     return SetTranslink(checking_id, checking_type
-        , Model_Attachment::REFTYPE_STR_ASSET, asset_id);
+        , Model_Asset::refTypeName, asset_id);
 }
 
 Model_Translink::Data* Model_Translink::SetStockTranslink(const int64 stock_id
@@ -75,11 +76,11 @@ Model_Translink::Data* Model_Translink::SetStockTranslink(const int64 stock_id
     , const CHECKING_TYPE checking_type)
 {
     return SetTranslink(checking_id, checking_type
-        , Model_Attachment::REFTYPE_STR_STOCK, stock_id);
+        , Model_Stock::refTypeName, stock_id);
 }
 
 Model_Translink::Data* Model_Translink::SetTranslink(const int64 checking_id
-    , const CHECKING_TYPE checking_type
+    , [[maybe_unused]] const CHECKING_TYPE checking_type
     , const wxString& link_type, const int64 link_record_id)
 {
     Model_Translink::Data* translink = Model_Translink::instance().create();
@@ -93,25 +94,36 @@ Model_Translink::Data* Model_Translink::SetTranslink(const int64 checking_id
     set the checking type as AS_INCOME_EXPENSE = 32701 or AS_TRANSFER
     */
     Model_Checking::Data* checking_entry = Model_Checking::instance().get(checking_id);
-    checking_entry->TOACCOUNTID = checking_type;
+    // checking_entry->TOACCOUNTID = checking_type;
     Model_Checking::instance().save(checking_entry);
 
     return translink;
 }
 
-Model_Translink::Data_Set Model_Translink::TranslinkList(Model_Attachment::REFTYPE_ID link_table
-    , const int64 link_entry_id)
+template <typename T>
+Model_Translink::Data_Set Model_Translink::TranslinkList(const int64 link_entry_id)
 {
     Model_Translink::Data_Set translink_list = Model_Translink::instance().find(
-        Model_Translink::LINKTYPE(Model_Attachment::REFTYPE_STR[link_table])
+        Model_Translink::LINKTYPE(T::refTypeName)
         , Model_Translink::LINKRECORDID(link_entry_id));
 
     return translink_list;
 }
 
+Model_Translink::Data_Set Model_Translink::TranslinkListBySymbol(const wxString symbol)
+{
+    Model_Translink::Data_Set result;
+    Model_Stock::Data_Set stocks = Model_Stock::instance().find(Model_Stock::SYMBOL(symbol));
+    for (auto& stock : stocks) {
+       Model_Translink::Data_Set t = Model_Translink::instance().find(Model_Translink::LINKRECORDID(stock.STOCKID));
+       result.insert(result.end(), t.begin(), t.end());
+    }
+    return result;
+}
+
 bool Model_Translink::HasShares(const int64 stock_id)
 {
-    if (TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, stock_id).empty())
+    if (TranslinkList<Model_Stock>(stock_id).empty())
     {
         return false;
     }
@@ -132,13 +144,18 @@ Model_Translink::Data Model_Translink::TranslinkRecord(const int64 checking_id)
     }
 }
 
-void Model_Translink::RemoveTransLinkRecords(Model_Attachment::REFTYPE_ID table_type, const int64 entry_id)
+template <typename T>
+void Model_Translink::RemoveTransLinkRecords(const int64 entry_id)
 {
-    for (const auto& translink : TranslinkList(table_type, entry_id))
+    for (const auto& translink : TranslinkList<T>(entry_id))
     {
         Model_Checking::instance().remove(translink.CHECKINGACCOUNTID);
     }
 }
+
+// Explicit Instantiation
+template void Model_Translink::RemoveTransLinkRecords<Model_Asset>(const int64);
+template void Model_Translink::RemoveTransLinkRecords<Model_Stock>(const int64);
 
 void Model_Translink::RemoveTranslinkEntry(const int64 checking_account_id)
 {
@@ -146,78 +163,22 @@ void Model_Translink::RemoveTranslinkEntry(const int64 checking_account_id)
     Model_Shareinfo::RemoveShareEntry(translink.CHECKINGACCOUNTID);
     Model_Translink::instance().remove(translink.TRANSLINKID);
 
-    if (translink.LINKTYPE == Model_Attachment::REFTYPE_STR_ASSET)
+    if (translink.LINKTYPE == Model_Asset::refTypeName)
     {
         Model_Asset::Data* asset_entry = Model_Asset::instance().get(translink.LINKRECORDID);
         UpdateAssetValue(asset_entry);
     }
 
-    if (translink.LINKTYPE == Model_Attachment::REFTYPE_STR_STOCK)
+    if (translink.LINKTYPE == Model_Stock::refTypeName)
     {
         Model_Stock::Data* stock_entry = Model_Stock::instance().get(translink.LINKRECORDID);
-        UpdateStockValue(stock_entry);
+        Model_Stock::UpdatePosition(stock_entry);
     }
-}
-
-void Model_Translink::UpdateStockValue(Model_Stock::Data* stock_entry)
-{
-    Data_Set trans_list = TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, stock_entry->STOCKID);
-    double total_shares = 0;
-    double total_initial_value = 0;
-    double total_commission = 0;
-    double avg_share_price = 0;
-    wxString earliest_date = wxDate::Today().FormatISODate();
-    Model_Checking::Data_Set checking_list;
-    for (const auto &trans : trans_list)
-    {
-        Model_Checking::Data* checking_entry = Model_Checking::instance().get(trans.CHECKINGACCOUNTID);
-        if (checking_entry && checking_entry->DELETEDTIME.IsEmpty() && Model_Checking::status_id(checking_entry->STATUS) != Model_Checking::STATUS_ID_VOID) checking_list.push_back(*checking_entry);
-    }
-    std::stable_sort(checking_list.begin(), checking_list.end(), SorterByTRANSDATE());
-    for (const auto &trans : checking_list)
-    {
-        Model_Shareinfo::Data* share_entry = Model_Shareinfo::ShareEntry(trans.TRANSID);
-
-        total_shares += share_entry->SHARENUMBER;
-        if (total_shares < 0) total_shares = 0;
-
-        if (share_entry->SHARENUMBER > 0) {
-            total_initial_value += share_entry->SHARENUMBER * share_entry->SHAREPRICE + share_entry->SHARECOMMISSION;
-        }
-        else {
-            total_initial_value += share_entry->SHARENUMBER * avg_share_price;
-        }
-
-        if (total_initial_value < 0) total_initial_value = 0;
-        if (total_shares > 0) avg_share_price = total_initial_value / total_shares;
-
-        total_commission += share_entry->SHARECOMMISSION;
-
-        wxString transdate = trans.TRANSDATE;
-        if (transdate < earliest_date) earliest_date = transdate;
-    }
-
-    // The stock record contains the total of share transactions.
-    if (trans_list.empty())
-    {
-        stock_entry->PURCHASEPRICE = stock_entry->CURRENTPRICE;
-    }
-    else
-    {
-        wxDateTime purchasedate;
-        purchasedate.ParseDateTime(earliest_date) || purchasedate.ParseDate(earliest_date);
-        stock_entry->PURCHASEDATE = purchasedate.FormatISODate();
-        stock_entry->PURCHASEPRICE = avg_share_price;
-        stock_entry->NUMSHARES = total_shares;
-        stock_entry->VALUE = total_initial_value;
-        stock_entry->COMMISSION = total_commission;
-    }
-    Model_Stock::instance().save(stock_entry);
 }
 
 void Model_Translink::UpdateAssetValue(Model_Asset::Data* asset_entry)
 {
-    Data_Set trans_list = TranslinkList(Model_Attachment::REFTYPE_ID_ASSET, asset_entry->ASSETID);
+    Data_Set trans_list = TranslinkList<Model_Asset>(asset_entry->ASSETID);
     double new_value = 0;
     for (const auto &trans : trans_list)
     {
@@ -227,14 +188,14 @@ void Model_Translink::UpdateAssetValue(Model_Asset::Data* asset_entry)
             Model_Currency::Data* asset_currency = Model_Account::currency(Model_Account::instance().get(asset_trans->ACCOUNTID));
             const double conv_rate = Model_CurrencyHistory::getDayRate(asset_currency->CURRENCYID, asset_trans->TRANSDATE);
 
-            if (asset_trans->TRANSCODE == Model_Checking::TYPE_STR_DEPOSIT)
+            if (asset_trans->TRANSCODE == Model_Checking::TYPE_NAME_DEPOSIT)
             {
                 new_value -= asset_trans->TRANSAMOUNT * conv_rate; // Withdrawal from asset value
             }
             else
             {
                 new_value += asset_trans->TRANSAMOUNT * conv_rate;  // Deposit to asset value
-            }  
+            }
         }
     }
 
@@ -247,7 +208,7 @@ void Model_Translink::UpdateAssetValue(Model_Asset::Data* asset_entry)
 
 bool Model_Translink::ShareAccountId(int64& stock_entry_id)
 {
-    Model_Translink::Data_Set stock_translink_list = TranslinkList(Model_Attachment::REFTYPE_ID_STOCK, stock_entry_id);
+    Model_Translink::Data_Set stock_translink_list = TranslinkList<Model_Stock>(stock_entry_id);
 
     if (!stock_translink_list.empty())
     {
@@ -263,4 +224,3 @@ bool Model_Translink::ShareAccountId(int64& stock_entry_id)
 
     return false;
 }
-

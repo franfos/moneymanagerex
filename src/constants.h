@@ -1,6 +1,7 @@
 /*******************************************************
 Copyright (C) 2009 VaDiM
 Copyright (C) 2021-2022 Mark Whalley (mark@ipx.co.uk)
+Copyright (C) 2025 Klaus Wich
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,6 +20,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #pragma once
 
 #include "defs.h"
+#include "paths.h"
 #include "versions.h"
 //----------------------------------------------------------------------------
 
@@ -91,6 +93,7 @@ namespace weblink
     extern const wxString YahooQuotesHistory;
     extern const wxString CoinCapSearch;
     extern const wxString CoinCapHistory;
+    extern const wxString GeneralReport;
 } // namespace weblink
 } // namespace mmex
 
@@ -100,23 +103,11 @@ extern const wxString VIEW_ACCOUNTS_CLOSED_STR;
 extern const wxString VIEW_ACCOUNTS_FAVORITES_STR;
 
 extern const wxString LANGUAGE_PARAMETER;
-extern const wxString INIDB_USE_CURRENCY_HISTORY;
 extern const wxString INIDB_USE_TRANSACTION_SOUND;
 extern const wxString INIDB_USE_ORG_DATE_COPYPASTE;
 extern const wxString INIDB_USE_ORG_DATE_DUPLICATE;
+extern const wxString INIDB_USE_ORG_STATE_DUPLICATE_PASTE;
 extern const wxString INIDB_SEND_USAGE_STATS;
-extern const wxString INIDB_CHECK_NEWS;
-
-extern const wxString INIDB_HIDE_SHARE_ACCOUNTS;
-extern const wxString INIDB_HIDE_DELETED_TRANSACTIONS;
-extern const wxString INIDB_BUDGET_FINANCIAL_YEARS;
-extern const wxString INIDB_BUDGET_INCLUDE_TRANSFERS;
-extern const wxString INIDB_BUDGET_SUMMARY_WITHOUT_CATEG;
-extern const wxString INIDB_BUDGET_OVERRIDE;
-extern const wxString INIDB_BUDGET_DEDUCT_MONTH_FROM_YEAR;
-extern const wxString INIDB_IGNORE_FUTURE_TRANSACTIONS;
-extern const wxString INIDB_SHOW_TOOLTIPS;
-extern const wxString INIDB_SHOW_MONEYTIPS;
 
 extern const wxString ATTACHMENTS_FOLDER_DOCUMENTS;
 extern const wxString ATTACHMENTS_FOLDER_DATABASE;
@@ -125,6 +116,7 @@ extern const wxString ATTACHMENTS_FOLDER_APPDATA;
 
 extern const wxString INIDB_NEWS_LAST_READ_DATE;
 
+extern const wxDateTime DATE_MIN;
 extern const wxDateTime DATE_MAX;
 
 extern const wxArrayString g_locales();
@@ -158,6 +150,4 @@ enum id
     MENU_VIEW_SHOW_MONEYTIPS,
     MENU_VIEW_TOGGLE_FULLSCREEN,
     mmID_MAX,
-
 };
-

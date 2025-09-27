@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
+ *          AUTO GENERATED at 2025-05-08 09:16:56.228434.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -167,6 +167,16 @@ struct DB_Table_CATEGORY_V1 : public DB_Table
         db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('55', '%s', '1', '-1')", _("Other Income")));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('56', '%s', '1', '-1')", _("Other Expenses")));
         db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('57', '%s', '1', '-1')", _("Transfer")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('58', '%s', '1', '-1')", _("Investment")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('59', '%s', '1', '58')", _("Purchase")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('60', '%s', '1', '58')", _("Sale")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('61', '%s', '1', '58')", _("Dividend")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('62', '%s', '1', '58')", _("Capital Gains")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('63', '%s', '1', '58')", _("Brokerage Fees")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('64', '%s', '1', '58')", _("Interest")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('65', '%s', '1', '58')", _("Taxes")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('66', '%s', '1', '58')", _("Split")));
+        db->ExecuteUpdate(wxString::Format("INSERT INTO CATEGORY_V1 VALUES ('67', '%s', '1', '58')", _("Merger")));
         db->Commit();
     }
     
@@ -251,14 +261,14 @@ struct DB_Table_CATEGORY_V1 : public DB_Table
             CATEGID = id;
         }
 
-        bool operator < (const Data& r) const
+        auto operator < (const Data& other) const
         {
-            return this->id() < r.id();
+            return this->id() < other.id();
         }
-        
-        bool operator < (const Data* r) const
+
+        auto operator < (const Data* other) const
         {
-            return this->id() < r->id();
+            return this->id() < other->id();
         }
 
         bool equals(const Data* r) const
@@ -373,7 +383,7 @@ struct DB_Table_CATEGORY_V1 : public DB_Table
         }
 
         /** Save the record instance in memory to the database. */
-        bool save(wxSQLite3Database* db)
+        bool save(wxSQLite3Database* db, bool force_insert = false)
         {
             if (db && db->IsReadOnly()) return false;
             if (!table_ || !db) 
@@ -382,7 +392,7 @@ struct DB_Table_CATEGORY_V1 : public DB_Table
                 return false;
             }
 
-            return table_->save(this, db);
+            return table_->save(this, db, force_insert);
         }
 
         /** Remove the record instance from memory and the database. */
@@ -440,10 +450,10 @@ struct DB_Table_CATEGORY_V1 : public DB_Table
     * Either create a new record or update the existing record.
     * Remove old record from the memory table (cache)
     */
-    bool save(Self::Data* entity, wxSQLite3Database* db)
+    bool save(Self::Data* entity, wxSQLite3Database* db, bool force_insert = false)
     {
         wxString sql = wxEmptyString;
-        if (entity->id() <= 0) //  new & insert
+        if (entity->id() <= 0 || force_insert) //  new & insert
         {
             sql = "INSERT INTO CATEGORY_V1(CATEGNAME, ACTIVE, PARENTID, CATEGID) VALUES(?, ?, ?, ?)";
         }
@@ -541,9 +551,8 @@ struct DB_Table_CATEGORY_V1 : public DB_Table
     template<typename... Args>
     Self::Data* get_one(const Args& ... args)
     {
-        for (Index_By_Id::iterator it = index_by_id_.begin(); it != index_by_id_.end(); ++ it)
+        for (auto& [_, item] : index_by_id_)
         {
-            Self::Data* item = it->second;
             if (item->id() > 0 && match(item, args...)) 
             {
                 ++ hit_;
@@ -568,8 +577,7 @@ struct DB_Table_CATEGORY_V1 : public DB_Table
             return nullptr;
         }
 
-        Index_By_Id::iterator it = index_by_id_.find(id);
-        if (it != index_by_id_.end())
+        if (auto it = index_by_id_.find(id); it != index_by_id_.end())
         {
             ++ hit_;
             return it->second;

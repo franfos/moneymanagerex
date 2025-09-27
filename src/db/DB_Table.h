@@ -12,7 +12,7 @@
  *      @brief
  *
  *      Revision History:
- *          AUTO GENERATED at 2025-02-04 16:22:14.834591.
+ *          AUTO GENERATED at 2025-05-08 09:16:56.228434.
  *          DO NOT EDIT!
  */
 //=============================================================================
@@ -50,6 +50,8 @@ struct DB_Column
     {}
 };
 
+static int64 ticks_last_ = 0;
+    
 struct DB_Table
 {
     DB_Table(): hit_(0), miss_(0), skip_(0) {};
@@ -70,10 +72,14 @@ struct DB_Table
         db->ExecuteUpdate("DROP TABLE IF EXISTS " + this->name());
     }
 
-    static wxLongLong newId()
+    static int64 newId()
     {
-        // Get the current time in milliseconds as wxLongLong
-        wxLongLong ticks = wxDateTime::UNow().GetValue();
+        // Get the current time in milliseconds as wxLongLong/int64
+        int64 ticks = wxDateTime::UNow().GetValue();
+        // Ensure uniqueness from last generated value
+        if (ticks <= ticks_last_)
+            ticks = ticks_last_ + 1;
+        ticks_last_ = ticks;
         // Generate a random 3-digit number (0 to 999)
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -169,10 +175,7 @@ bool match(const DATA* data, const Arg1& arg1)
 template<class DATA, typename Arg1, typename... Args>
 bool match(const DATA* data, const Arg1& arg1, const Args&... args)
 {
-    if (data->match(arg1)) 
-        return match(data, args...);
-    else
-        return false; // Short-circuit evaluation
+    return (data->match(arg1) && ... && data->match(args));
 }
 
 struct SorterByACCESSINFO

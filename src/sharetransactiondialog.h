@@ -40,7 +40,7 @@ public:
 
 private:
     bool Create(wxWindow* parent, wxWindowID id = wxID_ANY
-        , const wxString& caption = _("Edit Share Transaction")
+        , const wxString& caption = _t("Edit Share Transaction")
         , const wxPoint& pos = wxDefaultPosition
         , const wxSize& size = wxDefaultSize
         , long style = wxCAPTION | wxSYSTEM_MENU | wxCLOSE_BOX);
@@ -48,12 +48,13 @@ private:
     void CreateControls();
     void DataToControls();
 
-    double GetAmount(double shares, double price, double commision);
+    double GetAmount(double shares, double price, double commission);
     void OnQuit(wxCloseEvent& WXUNUSED(event));
     void OnOk(wxCommandEvent& WXUNUSED(event));
     void OnCancel(wxCommandEvent& WXUNUSED(event));
     void OnStockPriceButton(wxCommandEvent& event);
     void CalculateAmount(wxCommandEvent& event);
+    void OnDeductibleSplit(wxCommandEvent& event);
 
 private:
     Model_Stock::Data* m_stock = nullptr;
@@ -63,6 +64,7 @@ private:
     mmTextCtrl* m_share_price_ctrl = nullptr;
     wxTextCtrl* m_share_lot_ctrl = nullptr;
     mmTextCtrl* m_share_commission_ctrl = nullptr;
+    wxBitmapButton* m_deductible_comm_split = nullptr;
     wxTextCtrl* m_notes_ctrl = nullptr;
     wxBitmapButton* m_attachments_btn = nullptr;
     wxBitmapButton* web_button = nullptr;
@@ -73,6 +75,9 @@ private:
     Model_Checking::Data* m_checking_entry = nullptr;
     Model_Translink::Data* m_translink_entry = nullptr;
     Model_Shareinfo::Data* m_share_entry = nullptr;
+
+    std::vector<Split> m_local_deductible_splits, m_local_non_deductible_splits;
+
     enum
     {
         ID_STOCKTRANS_DATEPICKER_CHANGE = wxID_HIGHEST + 820,
@@ -82,5 +87,6 @@ private:
         ID_STOCKTRANS_SHARE_PRICE,
         ID_STOCKTRANS_SHARE_LOT,
         ID_STOCKTRANS_SHARE_COMMISSION,
+        mmID_COMM_SPLIT,
     };
 };

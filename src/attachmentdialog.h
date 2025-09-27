@@ -20,11 +20,10 @@
 #ifndef MM_EX_ATTACHMENTDIALOG_H_
 #define MM_EX_ATTACHMENTDIALOG_H_
 
-#include "defs.h"
 #include <wx/dataview.h>
 #include <map>
-
-typedef wxLongLong int64;
+#include "defs.h"
+#include "primitive.h"
 
 class mmAttachmentDialog : public wxDialog
 {
@@ -54,8 +53,8 @@ private:
 
     int64 m_attachment_id = -1;
     std::map<int, wxString> ColName_;
-    wxButton* btnCancel_ = nullptr;
-    wxButton* button_OK_ = nullptr;
+    //wxButton* btnCancel_ = nullptr;
+    //wxButton* button_OK_ = nullptr;
     wxString m_PathSep = wxFileName::GetPathSeparator();
 
     wxString m_RefType;

@@ -53,7 +53,7 @@ Model_Splittransaction& Model_Splittransaction::instance()
 bool Model_Splittransaction::remove(int64 id)
 {
     // Delete all tags for the split before removing it
-    Model_Taglink::instance().DeleteAllTags(Model_Attachment::REFTYPE_STR_TRANSACTIONSPLIT, id);
+    Model_Taglink::instance().DeleteAllTags(Model_Splittransaction::refTypeName, id);
     return this->remove(id, db_);
 }
 
@@ -129,6 +129,22 @@ int Model_Splittransaction::update(Data_Set& rows, int64 transactionID)
         Model_Checking::instance().updateTimestamp(transactionID);
     
     return rows.size();
+}
+
+int Model_Splittransaction::update(const std::vector<Split>& rows, int64 transactionID)
+{
+
+    Data_Set splits;
+    for (const auto& entry : rows)
+    {
+        Model_Splittransaction::Data *s = instance().create();
+        s->CATEGID = entry.CATEGID;
+        s->SPLITTRANSAMOUNT = entry.SPLITTRANSAMOUNT;
+        s->NOTES = entry.NOTES;
+        splits.push_back(*s);
+    }
+
+    return this->update(splits, transactionID);
 }
 
 const wxString Model_Splittransaction::get_tooltip(const std::vector<Split>& rows, const Model_Currency::Data* currency)

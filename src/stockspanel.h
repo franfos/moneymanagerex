@@ -2,6 +2,7 @@
  Copyright (C) 2006 Madhan Kanagavel
  Copyright (C) 2010-2021 Nikolay Akimov
  Copyright (C) 2022 Mark Whalley (mark@ipx.co.uk)
+ Copyright (C) 2025 Klaus Wich
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -23,11 +24,11 @@
 
 #include "stocks_list.h"
 #include "mmpanelbase.h"
-#include <wx/tglbtn.h>
+#include "model/Model_Shareinfo.h"
 #include "mmframe.h"
 
 class wxListEvent;
-class mmStocksPanel;
+class Model_Shareinfo;
 
 class mmStocksPanel : public mmPanelBase
 {
@@ -60,12 +61,17 @@ public:
     //Unhide the Edit and Delete buttons if any record selected
     void enableEditDeleteButtons(bool en);
     void OnListItemActivated(int selectedIndex);
-    void AddStockTransaction(int selectedIndex);
+    int AddStockTransaction(int selectedIndex);
     void OnListItemSelected(int selectedIndex);
     void RefreshList();
     //void OnViewPopupSelected(wxCommandEvent& event);
 
     void ViewStockTransactions(int selectedIndex);
+    wxListCtrl* InitStockTxnListCtrl(wxWindow* parent);
+    void LoadStockTransactions(wxListCtrl* listCtrl, wxString symbol, int64 stockId);
+    void FillListRow(wxListCtrl* listCtrl, long index, const Model_Checking::Data& txn, const Model_Shareinfo::Data& share_entry);
+    void BindListEvents(wxListCtrl* listCtrl);
+    void CopySelectedRowsToClipboard(wxListCtrl* listCtrl);
 
     int64 m_account_id = -1;
     Model_Currency::Data * m_currency = nullptr;
@@ -76,11 +82,15 @@ public:
     wxString BuildPage() const;
     mmGUIFrame* m_frame;
 
+public:
+    int getFilter();
+
 private:
-    StocksListCtrl* listCtrlAccount_ = nullptr;
+    StocksListCtrl* m_lc = nullptr;
+    wxChoice* m_choiceFilter = nullptr;
     wxStaticText* stock_details_ = nullptr;
     void call_dialog(int selectedIndex);
-    void sortTable() {}
+    void sortList() {}
     const wxString Total_Shares();
 
     wxStaticText* header_text_ = nullptr;
@@ -94,7 +104,6 @@ private:
     wxString strLastUpdate_;
     bool StocksRefreshStatus_;
     wxDateTime LastRefreshDT_;
-
 };
 
 #endif

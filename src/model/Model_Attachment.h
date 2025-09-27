@@ -19,37 +19,14 @@
 #ifndef MODEL_ATTACHMENT_H
 #define MODEL_ATTACHMENT_H
 
-#include "Model.h"
+#include "choices.h"
 #include "db/DB_Table_Attachment_V1.h"
+#include "Model.h"
 
 class Model_Attachment : public Model<DB_Table_ATTACHMENT_V1>
 {
 public:
     using Model<DB_Table_ATTACHMENT_V1>::get;
-    enum REFTYPE_ID {
-        REFTYPE_ID_TRANSACTION = 0,
-        REFTYPE_ID_STOCK,
-        REFTYPE_ID_ASSET,
-        REFTYPE_ID_BANKACCOUNT,
-        REFTYPE_ID_BILLSDEPOSIT,
-        REFTYPE_ID_PAYEE,
-        REFTYPE_ID_TRANSACTIONSPLIT,
-        REFTYPE_ID_BILLSDEPOSITSPLIT
-    };
-    static wxArrayString REFTYPE_STR;
-    static const wxString REFTYPE_STR_TRANSACTION;
-    static const wxString REFTYPE_STR_STOCK;
-    static const wxString REFTYPE_STR_ASSET;
-    static const wxString REFTYPE_STR_BANKACCOUNT;
-    static const wxString REFTYPE_STR_BILLSDEPOSIT;
-    static const wxString REFTYPE_STR_PAYEE;
-    static const wxString REFTYPE_STR_TRANSACTIONSPLIT;
-    static const wxString REFTYPE_STR_BILLSDEPOSITSPLIT;
-
-    static const std::vector<std::pair<REFTYPE_ID, wxString> > REFTYPE_CHOICES;
-
-private:
-    static wxArrayString reftype_str_all();
 
 public:
     Model_Attachment();
@@ -81,10 +58,10 @@ public:
     static int LastAttachmentNumber(const wxString& RefType, const int64 RefId);
 
     /** Return a dataset with attachments linked to a specific type*/
-    std::map<int64, Data_Set> get_all(REFTYPE_ID reftype);
+    std::map<int64, Data_Set> get_all(const wxString& reftype);
 
     /** Return all attachments descriptions*/
     wxArrayString allDescriptions();
 };
 
-#endif // 
+#endif
